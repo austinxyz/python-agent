@@ -69,9 +69,9 @@
 
 - [x] 8.1 Run `cd backend && pytest` — assert all backend smoke and unit tests pass with exit code 0
 - [x] 8.2 Run `cd frontend && npm test` — assert all frontend vitest tests pass with exit code 0
-- [ ] 8.3 Run `docker compose up --build` — assert all three services start healthy; verify `http://localhost:3000` loads the Vue app and `http://localhost:5000/api/health` returns 200
+- [x] 8.3 Run `docker compose up --build` — assert all three services start healthy; verify `http://localhost:3000` loads the Vue app and `http://localhost:5000/api/health` returns 200
 - [x] 8.4 Inspect backend code: `grep -rn "search_private" backend/` — confirm every call site passes `user_id` explicitly; no omissions
 - [x] 8.5 Inspect frontend code: `grep -rn "console.log" frontend/src/` — confirm zero debug statements
 - [x] 8.6 Run superpowers:verification-before-completion: run full test suites, check private collection user_id filter coverage, confirm no hardcoded secrets, confirm `.env` is gitignored
 - [x] 8.7 Run superpowers:requesting-code-review on the complete diff for the foundation change; address all CRITICAL/HIGH findings
-- [ ] 8.8 Commit with `feat: add project foundation scaffold (Docker Compose, Flask app factory, Qdrant/SQLite init, Vue 3 frontend)`
+- [x] 8.8 Commit with `feat: add project foundation scaffold (Docker Compose, Flask app factory, Qdrant/SQLite init, Vue 3 frontend)`
