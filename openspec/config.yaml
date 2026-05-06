@@ -1,0 +1,86 @@
+schema: spec-driven
+
+# Project context — injected into every artifact's instruction prompt.
+context: |
+  Tech stack: Python 3.11+ + Flask 3.x backend, LangGraph 0.2+ for agent
+  orchestration, Qdrant (self-hosted) for vector storage, SQLite for metadata,
+  Vue 3 + Vite + Pinia frontend, Docker Compose for local/NAS/Railway.
+
+  Backend structure: backend/app/ (Flask app factory), backend/app/graphs/
+  (LangGraph graphs), backend/app/routes/ (blueprints), backend/app/services/
+  (Qdrant, SQLite, embedding), backend/app/models/ (SQLAlchemy or sqlite3 models).
+
+  Frontend structure: frontend/src/views/ (page-level), frontend/src/components/
+  (shared components), frontend/src/stores/ (Pinia), frontend/src/api/ (axios).
+
+  Backend tests: pytest + pytest-flask. Unit tests mirror backend/app/ → tests/unit/;
+  integration tests in tests/integration/. Run with: cd backend && pytest.
+
+  Frontend tests: vitest + @vue/test-utils + happy-dom. Specs mirror
+  frontend/src/ → frontend/tests/. Run with: cd frontend && npm test.
+
+  LLM + Embedding:
+    - LLM_PROVIDER env var: 'anthropic' (default) or 'openai'
+    - ANTHROPIC_API_KEY / OPENAI_API_KEY via .env
+    - DEFAULT_MODEL defaults to claude-haiku-4-5 (configurable via LLM_MODEL env var)
+    - Embedding: OpenAI text-embedding-3-small, hard dependency (no Anthropic embedding API)
+    - OPENAI_API_KEY required even when LLM_PROVIDER=anthropic
+
+  Qdrant collections:
+    - 'knowledge': public knowledge base, payload: domain, topic, source_file_id,
+      chunk_index, updated_at, status
+    - 'private': user private data, payload MUST include user_id; also: topic,
+      template_type, source_file_id, updated_at
+    - CRITICAL: every search on 'private' collection MUST add user_id payload filter;
+      V1 user_id is always "default"
+
+  Flask SSE:
+    - Streaming chat via SSE; use Flask's stream_with_context + Response(generator,
+      mimetype='text/event-stream')
+    - POST /api/chat returns SSE stream; each event: 'data: {"type":"token","content":"..."}\n\n'
+    - Final event: 'data: {"type":"done","sources":[...]}\n\n'
+
+  Conventions:
+    - Conventional Commits (feat:/fix:/chore:/docs:/refactor:/test:)
+    - All config via environment variables; no hardcoded keys, ports, or paths
+    - Private data queries MUST include user_id filter — missing filter is a bug
+    - Axios baseURL is '/api' — API calls must NOT add prefix again
+    - Component paths use kebab-case (tree-nav/, chat-view/)
+    - SQLite accessed via sqlite3 module or SQLAlchemy, no ORM migrations — plain
+      SQL schema in backend/db/schema.sql
+
+  Shared component: TreeNav.vue — used by wiki page (/wiki) AND ingest files tab.
+  Props: items (tree nodes), onSelect handler. Do not duplicate tree logic.
+
+  Superpowers integration:
+    - This project pairs OpenSpec with Anthropic superpowers skills.
+    - /opsx:propose triggers superpowers:brainstorming BEFORE artifact
+      generation (see .claude/commands/opsx/propose.md).
+    - /opsx:apply runs superpowers:test-driven-development at session
+      start and superpowers:requesting-code-review at task-group
+      checkpoints (see .claude/commands/opsx/apply.md).
+    - tasks.md MUST scaffold TDD discipline + review checkpoints so the
+      apply phase has the hooks it needs.
+
+# Per-artifact rules — appended to artifact-specific instructions.
+# Each rule must be a quoted scalar to avoid YAML multi-line ambiguity.
+rules:
+  proposal:
+    - "Always include a Non-Goals (or Out-of-Scope) section."
+    - "Capabilities section MUST list which existing capability is modified. Look in openspec/specs/ first; do not invent capability names."
+    - "Reference the requirement IDs from docs/superpowers/specs/2026-05-05-requirements.md (e.g., CHAT-04, ING-01) that this change addresses."
+    - "If the change has visual/UX surface, mention that brainstorming has already produced design mockups under docs/superpowers/specs/2026-05-05-knowledge-agent-design.md."
+
+  design:
+    - "Reference the brainstorming spec doc docs/superpowers/specs/2026-05-05-knowledge-agent-design.md as primary input when relevant."
+    - "Decisions section MUST cover alternatives considered, not just the choice made."
+    - "For any Qdrant query change: explicitly state whether user_id filter is applied and why."
+    - "For any SSE/streaming change: describe the event format (type field + payload) and the terminal event."
+
+  tasks:
+    - "Each implementation task that introduces NEW behavior MUST be preceded by a RED-failing-test task. Pattern: '- [ ] N.X RED — write failing pytest test for <behavior>' followed by '- [ ] N.X+1 GREEN — minimal impl to pass the test'. Use vitest for Vue components/stores/api, pytest for Flask routes/services/graphs."
+    - "Bug fixes MUST be preceded by a regression test that reproduces the bug (RED), then the fix (GREEN)."
+    - "Each '## N' task group MUST end with a checkpoint task: '- [ ] N.Z Run superpowers:requesting-code-review on the diff for group N; address CRITICAL/HIGH findings before moving on'."
+    - "The final task group MUST include a verification task: '- [ ] M.K Run superpowers:verification-before-completion (cd backend && pytest; cd frontend && npm test; grep -r console.log frontend/src; diff review); ensure no user_id filter is missing from private collection queries'."
+    - "Tasks SHOULD explicitly name the superpowers skill to invoke when relevant (e.g., 'Invoke superpowers:test-driven-development to scaffold tests for the new LangGraph node')."
+    - "LangGraph graph tasks MUST test nodes independently (unit) before testing the full graph flow (integration)."

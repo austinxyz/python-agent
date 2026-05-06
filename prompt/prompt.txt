@@ -1,0 +1,12 @@
+之前我用llm-wiki的方式做了理财知识库，C:\Users\lorra\projects\personal\wealth，这个知识库是运行在claude上，但是有不少局限，我在这个blog中C:\Users\lorra\projects\blogs\blog\2026-05-04-wealth-llm-wiki有比较基于是skill和通用agent的优缺点。
+
+我现在想做一个新的project，做一个通用agent，也是同样的功能，可以将raw的知识消化为wiki，保存在向量数据库中，用户可以有自己的私有数据，让agent提供专业的解答。
+
+架构上来，我想用langgraph+python+flask，可以用react和rag，有必要的话可以连mcp作为前端，你可以给出建议什么是最新的架构。
+
+具体的开发可以用openspec+superpower结合的方式
+
+但是第一步的话，先通过superpowers 把架构定下来，然后以此建立claude.md文件，以及做出需求概要。
+
+之后我会根据需求概要，逐渐的用openspec+superpower来实现这个agent
+
