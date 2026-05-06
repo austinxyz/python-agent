@@ -41,8 +41,8 @@
 - [x] 5.1 Remove `FileViewer.vue` import from `IngestView.vue` (component still exists on disk; leave deletion for a future cleanup commit to avoid breaking potential other importers)
 - [x] 5.2 Run `cd backend && pytest` — assert all backend tests pass with exit code 0
 - [x] 5.3 Run `cd frontend && npm test` — assert all frontend vitest tests pass with exit code 0
-- [ ] 5.4 Run superpowers:verification-before-completion: full test suites; `grep -rn "console.log" frontend/src/` confirm zero; inspect that `GET /api/files` response includes `title` field; confirm no private-collection query is missing `user_id` filter
-- [ ] 5.5 Manual smoke test: `docker compose up --build`; open `http://localhost:3000/ingest`; click a domain → verify domain info panel; click "+ 新建摄入" → verify form with domain badge; enter title + URL → submit → verify result panel reaches "摄入完成"; verify new title appears in left sidebar; click the title → verify content viewer loads inline
+- [x] 5.4 Run superpowers:verification-before-completion: full test suites; `grep -rn "console.log" frontend/src/` confirm zero; inspect that `GET /api/files` response includes `title` field; confirm no private-collection query is missing `user_id` filter
+- [x] 5.5 Manual smoke test: `docker compose up --build`; open `http://localhost:3000/ingest`; click a domain → verify domain info panel; click "+ 新建摄入" → verify form with domain badge; enter title + URL → submit → verify result panel reaches "摄入完成"; verify new title appears in left sidebar; click the title → verify content viewer loads inline
 - [x] 5.6 Run superpowers:requesting-code-review on the complete ingest-redesign diff; address all CRITICAL/HIGH findings
 - [x] 5.7 Commit with `feat: redesign ingest page as left-right knowledge browser with title field`
 - [x] 5.8 Update dev log at `docs/log/2026-05-06.md` with this feature batch

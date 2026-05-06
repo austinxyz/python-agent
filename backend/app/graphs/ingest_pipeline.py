@@ -280,12 +280,22 @@ def store_node(state: IngestState) -> dict:
 
         db = DatabaseService()
         file_svc = FileService()
+        stored_filename = state["filename"]
         if state["source_type"] == "file" and state["file_content"]:
+            stored_filename = state["filename"] or f"{file_id}.bin"
             file_svc.save(
                 user_id=state["user_id"],
                 file_id=file_id,
-                filename=state["filename"] or f"{file_id}.bin",
+                filename=stored_filename,
                 content=state["file_content"],
+            )
+        elif state["source_type"] in ("text", "url") and state.get("raw_content"):
+            stored_filename = f"{file_id}.txt"
+            file_svc.save(
+                user_id=state["user_id"],
+                file_id=file_id,
+                filename=stored_filename,
+                content=(state["raw_content"] or "").encode("utf-8"),
             )
         with db.connection() as conn:
             file_svc.register(
@@ -299,7 +309,7 @@ def store_node(state: IngestState) -> dict:
                 topic=state["topic"],
                 size_bytes=state["size_bytes"] or 0,
                 chunk_count=len(chunks),
-                filename=state["filename"],
+                filename=stored_filename,
                 title=state.get("title"),
             )
 
