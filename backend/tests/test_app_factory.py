@@ -11,7 +11,7 @@ REQUIRED_VARS = [
 
 STUB_ROUTES = [
     "/api/wiki", "/api/chat",
-    "/api/private", "/api/files", "/api/prompts",
+    "/api/private", "/api/prompts",
 ]
 
 

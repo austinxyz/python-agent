@@ -141,3 +141,51 @@ class TestFileServiceRegister:
 
         assert row["filename"] == "abc123.pdf"
         assert row["orig_name"] == "My Budget (Final).pdf"
+
+    def test_register_stores_title_when_provided(self, tmp_path, monkeypatch):
+        monkeypatch.setenv("UPLOADS_PATH", str(tmp_path))
+        monkeypatch.setenv("SQLITE_PATH", str(tmp_path / "test.db"))
+        db = DatabaseService()
+        svc = FileService()
+        with db.connection() as conn:
+            svc.register(
+                conn,
+                user_id="default",
+                file_id="file-004",
+                orig_name="roth.pdf",
+                source_type="file",
+                source_url=None,
+                domain="退休规划",
+                topic=None,
+                size_bytes=500,
+                chunk_count=2,
+                title="Roth IRA详解",
+            )
+            row = conn.execute(
+                "SELECT title FROM files WHERE id = ?", ("file-004",)
+            ).fetchone()
+        assert row["title"] == "Roth IRA详解"
+
+    def test_register_stores_null_title_when_not_provided(self, tmp_path, monkeypatch):
+        monkeypatch.setenv("UPLOADS_PATH", str(tmp_path))
+        monkeypatch.setenv("SQLITE_PATH", str(tmp_path / "test.db"))
+        db = DatabaseService()
+        svc = FileService()
+        with db.connection() as conn:
+            svc.register(
+                conn,
+                user_id="default",
+                file_id="file-005",
+                orig_name="notes.txt",
+                source_type="file",
+                source_url=None,
+                domain="其他",
+                topic=None,
+                size_bytes=100,
+                chunk_count=1,
+                title=None,
+            )
+            row = conn.execute(
+                "SELECT title FROM files WHERE id = ?", ("file-005",)
+            ).fetchone()
+        assert row["title"] is None

@@ -7,6 +7,7 @@ CREATE TABLE IF NOT EXISTS files (
     source_url TEXT,
     domain TEXT,
     topic TEXT,
+    title TEXT,
     size_bytes INTEGER,
     chunk_count INTEGER DEFAULT 0,
     created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))

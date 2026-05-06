@@ -41,5 +41,21 @@ export const useIngestStore = defineStore('ingest', {
         })
       }
     },
+
+    pollJob(job_id, onComplete = null, intervalMs = 3000, maxAttempts = 60) {
+      let attempts = 0
+      const tick = async () => {
+        await this.fetchJobStatus(job_id)
+        const job = this.jobs.find(j => j.job_id === job_id)
+        attempts++
+        if (job && job.status === 'running' && attempts < maxAttempts) {
+          setTimeout(tick, intervalMs)
+        } else if (typeof onComplete === 'function') {
+          const terminal = (job && job.status !== 'running') ? job : { status: 'error', error: '摄入超时' }
+          onComplete(terminal)
+        }
+      }
+      setTimeout(tick, intervalMs)
+    },
   },
 })

@@ -46,6 +46,7 @@ def ingest_post():
     source_url = request.form.get("source_url") if source_type == "url" else None
     domain = request.form.get("domain", "general").strip()
     topic = request.form.get("topic", "general").strip()
+    title = request.form.get("title") or None
     user_id = "default"  # V1: single-tenant, no auth
 
     job_id = str(uuid.uuid4())
@@ -62,6 +63,7 @@ def ingest_post():
                 orig_name=orig_name or filename or source_url or "",
                 domain=domain,
                 topic=topic,
+                title=title,
                 content=content,
                 file_content=file_content,
                 filename=filename,
@@ -69,7 +71,12 @@ def ingest_post():
                 job_id=job_id,
                 file_id=file_id,
             )
-            job_registry.update(job_id, result)
+            job_registry.update(job_id, {
+                "status": result.get("status"),
+                "file_id": result.get("file_id"),
+                "chunk_count": result.get("chunk_count"),
+                "error": result.get("error"),
+            })
         except Exception as exc:
             job_registry.update(job_id, {"status": "error", "error": str(exc)})
 

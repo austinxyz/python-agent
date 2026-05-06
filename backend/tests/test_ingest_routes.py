@@ -74,6 +74,57 @@ class TestIngestPostValidation:
 
 
 # ---------------------------------------------------------------------------
+# POST /api/ingest — title field (task 2.1)
+# ---------------------------------------------------------------------------
+
+class TestIngestPostTitle:
+    def _sync_thread(self):
+        """Return a threading.Thread replacement that runs target synchronously on .start()."""
+        class _SyncThread:
+            def __init__(self, target=None, daemon=None, **_):
+                self._target = target
+            def start(self):
+                if self._target:
+                    self._target()
+        return _SyncThread
+
+    def test_ingest_post_passes_title_to_pipeline(self, client):
+        with patch("app.routes.ingest.IngestPipeline") as MockPipeline, \
+             patch("app.routes.ingest.job_registry"), \
+             patch("app.routes.ingest.threading.Thread", self._sync_thread()):
+            MockPipeline.return_value.run.return_value = {
+                "status": "completed", "file_id": "f-001", "chunk_count": 2,
+            }
+            resp = client.post("/api/ingest", data={
+                "source_type": "url",
+                "destination": "knowledge",
+                "source_url": "https://example.com/article",
+                "title": "Roth IRA详解",
+            }, content_type="multipart/form-data")
+
+        assert resp.status_code == 202
+        kwargs = MockPipeline.return_value.run.call_args.kwargs
+        assert kwargs.get("title") == "Roth IRA详解"
+
+    def test_ingest_post_omitted_title_passes_none_to_pipeline(self, client):
+        with patch("app.routes.ingest.IngestPipeline") as MockPipeline, \
+             patch("app.routes.ingest.job_registry"), \
+             patch("app.routes.ingest.threading.Thread", self._sync_thread()):
+            MockPipeline.return_value.run.return_value = {
+                "status": "completed", "file_id": "f-002", "chunk_count": 1,
+            }
+            resp = client.post("/api/ingest", data={
+                "source_type": "url",
+                "destination": "knowledge",
+                "source_url": "https://example.com/article",
+            }, content_type="multipart/form-data")
+
+        assert resp.status_code == 202
+        kwargs = MockPipeline.return_value.run.call_args.kwargs
+        assert kwargs.get("title") is None
+
+
+# ---------------------------------------------------------------------------
 # GET /api/ingest/status/<job_id> (task 6.2)
 # ---------------------------------------------------------------------------
 

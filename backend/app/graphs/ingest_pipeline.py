@@ -32,6 +32,7 @@ class IngestState(TypedDict):
     orig_name: str
     domain: str
     topic: str
+    title: str | None
     raw_content: str | None
     chunks: list[dict] | None
     vectors: list[list[float]] | None
@@ -123,7 +124,9 @@ def _validate_url(url: str) -> None:
 
 def _fetch_url_text(url: str) -> str:
     _validate_url(url)
-    response = httpx.get(url, timeout=5.0, follow_redirects=False)
+    response = httpx.get(url, timeout=15.0, follow_redirects=True)
+    # Validate the final URL after redirects to prevent SSRF via open redirects
+    _validate_url(str(response.url))
     response.raise_for_status()
     content_type = response.headers.get("content-type", "")
     raw = response.text[:1_048_576]
@@ -297,6 +300,7 @@ def store_node(state: IngestState) -> dict:
                 size_bytes=state["size_bytes"] or 0,
                 chunk_count=len(chunks),
                 filename=state["filename"],
+                title=state.get("title"),
             )
 
         return {"chunk_count": len(chunks)}
@@ -386,6 +390,7 @@ class IngestPipeline:
         orig_name: str = "",
         domain: str = "general",
         topic: str = "general",
+        title: str | None = None,
         content: str | None = None,
         file_content: bytes | None = None,
         filename: str | None = None,
@@ -409,6 +414,7 @@ class IngestPipeline:
             "orig_name": orig_name or filename or source_url or "",
             "domain": domain,
             "topic": topic,
+            "title": title,
             "raw_content": None,
             "chunks": None,
             "vectors": None,

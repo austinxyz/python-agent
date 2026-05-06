@@ -32,6 +32,7 @@ def _state(**overrides) -> dict:
         "orig_name": "test.txt",
         "domain": "general",
         "topic": "test",
+        "title": None,
         "raw_content": None,
         "chunks": None,
         "vectors": None,
@@ -105,6 +106,7 @@ class TestFetchNode:
         fake_resp.text = "<html><body><p>Hello from URL</p></body></html>"
         fake_resp.headers = {"content-type": "text/html; charset=utf-8"}
         fake_resp.raise_for_status = MagicMock()
+        fake_resp.url = "https://example.com"
 
         with patch("app.graphs.ingest_pipeline.httpx") as mock_httpx:
             mock_httpx.get.return_value = fake_resp
@@ -280,6 +282,8 @@ class TestStoreNode:
             store_node(_store_state("knowledge"))
 
         MockFile.return_value.register.assert_called_once()
+        _, kwargs = MockFile.return_value.register.call_args
+        assert "title" in kwargs
 
 
 # ---------------------------------------------------------------------------
