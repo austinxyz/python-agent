@@ -17,7 +17,7 @@
 ```
 backend/app/
   routes/          # Flask 路由（ingest / wiki / chat / private / files / prompts）
-  agents/          # LangGraph（ingest_pipeline.py · qa_agent.py）
+  graphs/          # LangGraph（ingest_pipeline.py · qa_agent.py）
   services/        # Qdrant · 文件 · LLM 服务
   models/          # SQLite 数据模型
 

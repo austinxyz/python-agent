@@ -15,6 +15,7 @@ REQUIRED_ENV_VARS = [
     "FLASK_SECRET_KEY",
     "QDRANT_HOST",
     "QDRANT_PORT",
+    "UPLOADS_PATH",
 ]
 
 

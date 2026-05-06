@@ -14,3 +14,4 @@ def env_vars(tmp_path, monkeypatch):
     monkeypatch.setenv("QDRANT_PORT", "6333")
     monkeypatch.setenv("FLASK_SECRET_KEY", "test-secret-key")
     monkeypatch.setenv("SQLITE_PATH", str(tmp_path / "test.db"))
+    monkeypatch.setenv("UPLOADS_PATH", str(tmp_path / "uploads"))
