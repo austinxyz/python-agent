@@ -1,51 +1,51 @@
 # Knowledge Agent
 
-通用知识库 Agent。将原始知识摄入向量数据库，结合用户私有数据，通过 RAG 提供专业问答。V1 场景：个人理财。
+General-purpose personal knowledge base agent. Ingests raw knowledge into a vector database and answers questions via RAG. V1 use case: personal finance.
 
-## 技术栈
+## Tech Stack
 
-- **前端**：Vue 3 + Vite（`frontend/`）
-- **后端**：Python + Flask + LangGraph（`backend/`）
-- **向量库**：Qdrant（Docker 容器，port 6333）
-- **LLM**：Claude Haiku/Sonnet（Anthropic API，可配置切换 OpenAI）
-- **Embeddings**：OpenAI text-embedding-3-small
-- **元数据**：SQLite（文件注册表、笔记）
-- **部署**：Docker Compose → NAS → Railway
+- **Frontend**: Vue 3 + Vite (`frontend/`)
+- **Backend**: Python + Flask + LangGraph (`backend/`)
+- **Vector DB**: Qdrant (Docker container, port 6333)
+- **LLM**: Claude Haiku/Sonnet (Anthropic API, configurable)
+- **Embeddings**: OpenAI text-embedding-3-small
+- **Metadata**: SQLite (file registry, notes)
+- **Deployment**: Docker Compose → NAS → Railway
 
-## 项目结构
+## Project Structure
 
 ```
 backend/app/
-  routes/          # Flask 路由（ingest / wiki / chat / private / files / prompts）
-  graphs/          # LangGraph（ingest_pipeline.py · qa_agent.py）
-  services/        # Qdrant · 文件 · LLM 服务
-  models/          # SQLite 数据模型
+  routes/          # Flask blueprints (ingest / wiki / chat / private / files / prompts)
+  graphs/          # LangGraph (ingest_pipeline.py · qa_agent.py)
+  services/        # Qdrant · File · LLM services
+  models/          # SQLite data models
 
 frontend/src/
   views/           # WikiView · IngestView · ChatView · PrivateView
   components/      # TreeNav · ChatMessage · PromptLibrary · SaveNoteModal
 ```
 
-## 核心设计决策
+## Core Design Decisions
 
-**LangGraph 两个 Graph：**
-- `IngestPipeline`：确定性流水线，Source Router → Fetch → Clean → Chunk → Embed → Store
-- `QAAgent`：ReAct Agent，工具：`search_knowledge` / `search_private` / `get_entry`
+**Two LangGraph graphs:**
+- `IngestPipeline`: deterministic pipeline — Source Router → Fetch → Clean → Chunk → Embed → Store
+- `QAAgent`: ReAct agent with tools: `search_knowledge` / `search_private` / `get_entry`
 
-**Qdrant 两个集合：**
-- `knowledge`：公共知识库，所有用户共享
-- `private`：私有数据，查询时必须附加 `user_id` 过滤，V1 固定 `user_id="default"`
+**Two Qdrant collections:**
+- `knowledge`: shared across all users
+- `private`: per-user; every query must include a `user_id` filter; V1 uses `user_id="default"`
 
-**原始文件永久保留：** 摄入后存 `/app/uploads/{user_id}/{file_id}/`，SQLite `files` 表记录元数据。
+**Raw files are kept permanently:** stored at `/app/uploads/{user_id}/{file_id}/` after ingestion; SQLite `files` table records metadata.
 
-## 开发规范
+## Development Conventions
 
-- 私有数据查询必须附加 `user_id` 过滤，不能遗漏
-- SSE 流式响应用 Flask `Response(stream_with_context(...))`
-- LLM 和 Embedding provider 通过环境变量切换，不硬编码
-- `TreeNav.vue` 是通用组件，知识库和文件管理共用，不要重复实现
+- Private data queries must always include `user_id` filter — never omit it
+- SSE streaming responses use Flask `Response(stream_with_context(...))`
+- LLM and Embedding providers are switched via environment variables, never hardcoded
+- `TreeNav.vue` is a shared component for both the knowledge browser and file management — do not duplicate it
 
-## 环境变量（.env）
+## Environment Variables (.env)
 
 ```
 LLM_PROVIDER=anthropic
@@ -62,60 +62,58 @@ QDRANT_PORT=6333
 FLASK_SECRET_KEY=...
 ```
 
-## 设计文档
+## Design Documents
 
-`docs/superpowers/specs/2026-05-05-knowledge-agent-design.md`
+- Architecture & requirements: `docs/superpowers/specs/2026-05-05-knowledge-agent-design.md`
+- Frontend UI design system: `docs/frontend-ui-guide.md`
 
-## 前端 UI 设计规范
+## Known Pitfalls (past mistakes)
 
-`docs/frontend-ui-guide.md`
+### Windows Environment
 
-## 已知陷阱（过去犯过的错误）
+- **Bash tool cannot use Windows paths**: `cd C:\Users\...` fails in the Bash tool (Git Bash strips backslashes). For any shell operation involving Windows paths, use the **PowerShell tool**.
+- **docker cp path format**: In PowerShell use `docker cp "C:/Users/.../file.py" container:/path/file.py` (forward slashes, quoted). Do not run this with the Bash tool.
 
-### Windows 环境
+### Docker Deployment
 
-- **Bash tool 不能用 Windows 路径**：`cd C:\Users\...` 在 Bash tool 里会失败（Git Bash 把反斜杠吃掉）。凡是涉及 Windows 路径的 shell 操作，必须用 **PowerShell tool**。
-- **docker cp 路径格式**：在 PowerShell 中用 `docker cp "C:/Users/.../file.py" container:/path/file.py`（正斜杠，加引号）。不能用 Bash tool 执行这条命令。
-
-### Docker 部署
-
-- **前端改动不会热更新**：nginx 容器服务的是编译后的 `dist/`，修改 Vue 文件后必须 `docker compose up --build frontend -d` 重新构建，然后浏览器 `Ctrl+Shift+R` 强刷。不要反复检查代码以为是 bug。
-- **后端 Python 文件可热替换**：`docker cp` 复制新文件到容器后 `docker restart python-agent-api-1` 即可，不需要重新 build image。
-- **SQLite 环境变量名是 `SQLITE_PATH`**，不是 `DATABASE_PATH`。手写调试脚本时用 `os.environ.get('SQLITE_PATH', 'knowledge_agent.db')`，否则查到的是空库。
+- **Frontend changes are not hot-reloaded**: nginx serves the compiled `dist/`. After editing Vue files you must run `docker compose up --build frontend -d`, then hard-refresh the browser with `Ctrl+Shift+R`. Do not keep inspecting the code assuming a bug.
+- **Backend Python files can be hot-swapped**: `docker cp` the new file into the container then `docker restart python-agent-api-1` — no image rebuild needed.
+- **SQLite env var is `SQLITE_PATH`**, not `DATABASE_PATH`. Debug scripts must use `os.environ.get('SQLITE_PATH', 'knowledge_agent.db')`; otherwise they open an empty database.
 
 ### Ingest Pipeline
 
-- **text / url 摄入不自动保存原文到磁盘**：原始设计只有 `source_type=file` 才调用 `file_svc.save()`。text 和 url 的清洗后内容（`raw_content`）需要在 `store_node` 里显式保存为 `{file_id}.txt`，否则 `/content` 端点 404。
-- **URL `/content` 端点返回原始 HTML**：旧版直接返回 `resp.text`，前端用 `<pre>` 包裹后显示源码。正确做法：先看本地文件是否存在，存在则直接 serve；否则 re-fetch 并经 `_html_to_text()` 提取纯文本再返回。
+- **text / url ingestions do not automatically save content to disk**: The original design only called `file_svc.save()` for `source_type=file`. For `text` and `url`, the cleaned content (`raw_content`) must be explicitly saved in `store_node` as `{file_id}.txt`; otherwise the `/content` endpoint returns 404.
+- **`_SAFE_COMPONENT` regex blocks non-ASCII characters**: The path guard regex `^[a-zA-Z0-9_\-. ]+$` rejects Chinese characters, so Chinese titles cannot be used as filenames. Always use `{file_id}.txt` as the stored filename for text/url ingestions.
+- **URL `/content` endpoint returning raw HTML**: The old implementation returned `resp.text` directly; the frontend then displayed HTML source in `<pre>`. The correct approach: serve the local file first if it exists; fall back to re-fetching the URL and running `_html_to_text()` before returning `text/plain`.
 
 ### Git
 
-- **本地改动可能跨 session 未提交**：每次 push 前先 `git status` 确认没有遗漏的 unstaged 文件，上一个 session 的改动可能还在工作区里。
+- **Local changes may be left uncommitted across sessions**: Always run `git status` before pushing to confirm no unstaged files were left over from a previous session.
 
 ## Dev Log Practice
 
-**每完成一个功能批次，必须更新当天的开发日志。**
+**After each feature batch, update the day's dev log.**
 
-日志文件路径：`docs/log/YYYY-MM-DD.md`（按日期命名，当天若无则新建）
+Log path: `docs/log/YYYY-MM-DD.md` (create if it doesn't exist for the day)
 
-### 每个日志条目包含
+### Each log entry contains
 
 ```markdown
-### N. 功能名称
-**提交：** `<git hash>`
+### N. Feature Name
+**Commit:** `<git hash>`
 
-**功能：**
-- 简洁描述做了什么（bullet points）
+**Features:**
+- Concise bullet points describing what was done
 
-**代码审查发现（如有）：**
-| 级别 | 问题 | 修复 |
+**Code review findings (if any):**
+| Level | Issue | Fix |
 
-**测试：** X tests 全部通过（新增 Y 个）
+**Tests:** X tests all passing (Y new)
 ```
 
-### 规则
+### Rules
 
-- **每次 commit 后**更新日志（或每个功能批次结束时）
-- **待完成事项**用 `- [ ]`，已完成用 `- [x]`
-- 日志结尾保留「待完成」章节，列出下一批次或已知问题
-- 任务清单中始终包含 **`update log`** 这一步
+- Update the log **after each commit** (or at the end of each feature batch)
+- Pending items use `- [ ]`, completed items use `- [x]`
+- Keep a "Pending" section at the end listing the next batch or known issues
+- Always include **`update log`** as a step in the task list
