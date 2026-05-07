@@ -66,6 +66,28 @@ FLASK_SECRET_KEY=...
 
 `docs/superpowers/specs/2026-05-05-knowledge-agent-design.md`
 
+## 已知陷阱（过去犯过的错误）
+
+### Windows 环境
+
+- **Bash tool 不能用 Windows 路径**：`cd C:\Users\...` 在 Bash tool 里会失败（Git Bash 把反斜杠吃掉）。凡是涉及 Windows 路径的 shell 操作，必须用 **PowerShell tool**。
+- **docker cp 路径格式**：在 PowerShell 中用 `docker cp "C:/Users/.../file.py" container:/path/file.py`（正斜杠，加引号）。不能用 Bash tool 执行这条命令。
+
+### Docker 部署
+
+- **前端改动不会热更新**：nginx 容器服务的是编译后的 `dist/`，修改 Vue 文件后必须 `docker compose up --build frontend -d` 重新构建，然后浏览器 `Ctrl+Shift+R` 强刷。不要反复检查代码以为是 bug。
+- **后端 Python 文件可热替换**：`docker cp` 复制新文件到容器后 `docker restart python-agent-api-1` 即可，不需要重新 build image。
+- **SQLite 环境变量名是 `SQLITE_PATH`**，不是 `DATABASE_PATH`。手写调试脚本时用 `os.environ.get('SQLITE_PATH', 'knowledge_agent.db')`，否则查到的是空库。
+
+### Ingest Pipeline
+
+- **text / url 摄入不自动保存原文到磁盘**：原始设计只有 `source_type=file` 才调用 `file_svc.save()`。text 和 url 的清洗后内容（`raw_content`）需要在 `store_node` 里显式保存为 `{file_id}.txt`，否则 `/content` 端点 404。
+- **URL `/content` 端点返回原始 HTML**：旧版直接返回 `resp.text`，前端用 `<pre>` 包裹后显示源码。正确做法：先看本地文件是否存在，存在则直接 serve；否则 re-fetch 并经 `_html_to_text()` 提取纯文本再返回。
+
+### Git
+
+- **本地改动可能跨 session 未提交**：每次 push 前先 `git status` 确认没有遗漏的 unstaged 文件，上一个 session 的改动可能还在工作区里。
+
 ## Dev Log Practice
 
 **每完成一个功能批次，必须更新当天的开发日志。**
