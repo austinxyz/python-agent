@@ -25,7 +25,7 @@
 
 ## Capabilities
 
-### `foundation`
+### `foundation` ✅ 已实现
 **用户故事**：应用可以启动，用户能打开浏览器看到基础界面，四个导航页可以切换。
 
 **覆盖需求**：ARCH-01 ~ ARCH-07 · DATA-01 ~ DATA-08 · UI-01 ~ UI-02
@@ -39,43 +39,47 @@
 - `GET /api/health` 健康检查，返回 LLM provider 名称 + Qdrant 连通状态
 
 **前台**：
-- Vue 3 SPA 骨架（Vite + Pinia + Vue Router），左侧 100px 固定导航 + 主内容区布局
+- Vue 3 SPA 骨架（Vite + Pinia + Vue Router），可折叠左侧导航（展开 w-56 / 收起 w-16）+ 主内容区布局
 - 四个路由：`/wiki` · `/ingest` · `/chat` · `/private`，每页占位内容
 - 通用 `TreeNav.vue` 组件（展开/折叠、选中高亮、节点数量徽章）
-- 全局暗色主题（背景 #0a1520，边框 #1e2d3d，强调色 #60a5fa）
+- **Tailwind CSS + lucide-vue-next 设计系统**，蓝紫渐变浅色主题（非暗色主题）；详见 `docs/frontend-ui-guide.md`
 
 **验收标准**：`docker compose up` 后访问 `localhost:3000`，四个导航页切换正常，`/api/health` 返回 200。
 
 ---
 
-### `ingest`
-**用户故事**：用户可以上传文件（或输入 URL / 粘贴文本），选择存入公共知识库或私有区域，系统完成摄入并显示进度；用户可以在「已摄入文件」Tab 中查看、下载、删除原始文件。
+### `ingest` ✅ 已实现
+**用户故事**：用户可以上传文件（或输入 URL / 粘贴文本），取一个标题，选择领域，系统完成摄入并显示进度；用户可以在左侧领域树中浏览、查看、编辑已摄入文件的标题。
 
-**覆盖需求**：ING-01 ~ ING-06 · ING-09 ~ ING-10 · KB-05 ~ KB-06 · (P2) ING-07 ~ ING-08 · KB-07 ~ KB-08 · UI-08 ~ UI-15
+**覆盖需求**：ING-01 ~ ING-06 · ING-09 ~ ING-10 · KB-05 ~ KB-06 · UI-08 ~ UI-15
 
 **后台**：
 - LangGraph Ingest Pipeline：Source Router → Fetch → Clean → Chunk → Embed → Store → Summary
 - Source Router 支持 `file` / `url` / `text` 三种来源（V1）
-- Fetch Node：PDF 解析（pdfplumber）、Markdown/TXT 读取、URL 抓取（requests + BeautifulSoup）
+- Fetch Node：PDF 解析（pdfplumber）、Markdown/TXT 读取、URL 抓取（httpx + BeautifulSoup）
 - Chunk：目标 512 tokens / overlap 50 tokens，不足 512 tokens 作单块处理
-- Embed：OpenAI `text-embedding-3-small`；Store：写入目标 Qdrant 集合（knowledge 或 private）
-- 原始文件存 `/app/uploads/{user_id}/{file_id}/`，SQLite `files` 表记录元数据
+- Embed：OpenAI `text-embedding-3-small`；Store：写入 Qdrant `knowledge` 集合
+- 原始文件存 `/app/uploads/{user_id}/{file_id}/`；`text` / `url` 类型额外保存清洗后文本为 `{file_id}.txt`
+- SQLite `files` 表含 `title`（用户标题）· `filename`（磁盘文件名）· `domain` 字段
 - Summary Node 返回 `{job_id, chunk_count, file_id, status: "completed"}`
-- `POST /api/ingest`（接受 source_type · destination · 文件/URL/文本）返回 `job_id`
-- `GET /api/ingest/status/{job_id}` 摄入进度查询（前端轮询）
-- `GET /api/files` 文件列表（支持 domain / topic / user_id 过滤）
-- `GET /api/files/{id}` 文件查看/下载
+- `POST /api/ingest`（multipart/form-data，含 source_type · destination · domain · title · 文件/URL/文本），返回 `{job_id}`；文件上限 50 MB
+- `GET /api/ingest/status/{job_id}` 轮询状态；`JobRegistry` 线程安全（threading.Lock）
+- `GET /api/files` 文件列表（含 `title` / `filename` 字段，按 `user_id` 过滤，`created_at DESC`）
+- `PATCH /api/files/{id}` 更新标题（inline 编辑）
+- `GET /api/files/{id}/content` 优先服务本地文件；URL 类型无本地文件时重新抓取并提取纯文本
+- `GET /api/files/{id}/download` 下载原始文件
 - (P2) MCP 数据源（Google Docs / Notion）+ `POST /api/files/{id}/resync`
 
 **前台**：
-- 摄入页面（`/ingest`）两个 Tab：「➕ 新摄入」和「🗂 已摄入文件」
-- 新摄入 Tab：存入目标切换（公共知识库 / 私有数据）+ 文件拖拽/URL输入/文本粘贴 + 实时进度列表
-- 已摄入文件 Tab：左树（domain → topic，复用 TreeNav.vue）+ 右文件列表
-- 文件项：类型图标（📄/🔗/📝）· 文件名 · 大小 · 日期 · 分块数 · 领域标签
-- 文件操作按钮：👁 查看 / ⬇ 下载 / 🗑 删除；(P2) 🔄 重新同步（MCP 来源）
-- (P2) 「+ 摄入到此分类」按钮
+- 摄入页面（`/ingest`，页面标题「原始材料库」）：**左右两列知识库浏览器**
+- **左侧领域树**（≈200px）：固定 10 个领域（`DOMAINS` 常量，中文理财分类，「其他」最后）；每个领域可展开/折叠，显示文件标题列表 + 数量徽章
+- **右侧面板状态机**（5 状态）：`welcome`（默认占位）→ `domain`（领域详情 + 文件列表）→ `form`（摄入表单）→ `result`（进度轮询）→ `content`（文件内容）
+- 摄入表单：必填标题、只读领域徽章、URL/文本/文件三种来源切换；文本框 `min-height: 55vh` + `resize-y`；`destination` 固定为 `knowledge`（不在 UI 显示）
+- 标题 inline 编辑：hover 显示 ✏️，点击进入 `<input>` 编辑模式，调用 `PATCH /api/files/{id}`，immutable 更新本地状态
+- 内容查看：`useFileContent` composable 调用 `/content` 端点；无 `filename` 的条目显示「无原始文件可预览」占位
+- `pollJob(job_id, onComplete)` Pinia action：3 秒轮询，completed / error / 超时均触发 `onComplete` 回调
 
-**验收标准**：上传一个 PDF → 选择「公共知识库」→ 等待进度显示完成 → 在「已摄入文件」Tab 中能看到该文件并能下载原文。
+**验收标准**：选择领域 → 点击「+ 新建摄入」→ 填写标题、上传 PDF → 左侧领域树出现新标题 → 点击标题在右侧查看内容。
 
 ---
 
@@ -160,7 +164,7 @@
 
 | 归档名 | 影响 Capability | 时间 |
 |--------|----------------|------|
-| _(暂无归档变更)_ | — | — |
+| `2026-05-06-ingest-redesign` | `ingest` | 2026-05-06 |
 
 ---
 
