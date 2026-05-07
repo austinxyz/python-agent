@@ -20,10 +20,10 @@ describe('useFileContent', () => {
     expect(renderedContent.value).toMatch(/<h1/)
   })
 
-  it('load() for .txt file wraps content in <pre>', async () => {
+  it('load() for .txt file renders as markdown (paragraphs, not <pre>)', async () => {
     global.fetch.mockResolvedValue({
       ok: true,
-      text: async () => 'plain text content',
+      text: async () => '# Hello\n\nplain text content',
     })
 
     const { loading, error, renderedContent, load } = useFileContent()
@@ -31,7 +31,7 @@ describe('useFileContent', () => {
 
     expect(loading.value).toBe(false)
     expect(error.value).toBe('')
-    expect(renderedContent.value).toMatch(/<pre/)
+    expect(renderedContent.value).toMatch(/<h1/)
     expect(renderedContent.value).toContain('plain text content')
   })
 

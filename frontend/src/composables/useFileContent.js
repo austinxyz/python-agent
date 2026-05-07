@@ -27,7 +27,7 @@ export function useFileContent() {
 }
 
 export function renderContent(text, name) {
-  if (name.endsWith('.md') || name.endsWith('.markdown')) {
+  if (name.endsWith('.md') || name.endsWith('.markdown') || name.endsWith('.txt')) {
     return markdownToHtml(text)
   }
   return `<pre class="whitespace-pre-wrap break-words text-sm font-mono">${escapeHtml(text)}</pre>`
