@@ -35,7 +35,7 @@
 
 - [x] 5.1 Run `cd backend && pytest` — full backend suite green
 - [x] 5.2 Run `cd frontend && npm test` — full frontend suite green
-- [ ] 5.3 Manual smoke test via Docker: ingest 2 PDFs with different domains → navigate to `/wiki` → both domains appear → click entry → content renders → download button works
+- [x] 5.3 Manual smoke test via Docker: ingest 2 PDFs with different domains → navigate to `/wiki` → both domains appear → click entry → content renders → download button works
 - [x] 5.4 Verify no `user_id` filter is applied in wiki routes (knowledge collection is shared — adding user_id filter would be a bug)
 - [x] 5.5 Update `docs/log/YYYY-MM-DD.md` with commit hash, features, test count, and any code review findings
 - [x] 5.6 Run superpowers:requesting-code-review on full change diff; address all CRITICAL/HIGH findings
