@@ -59,6 +59,67 @@ class TestQdrantServiceCollectionInit:
             client.create_collection.assert_not_called()
 
 
+def _make_scroll_page(points, next_offset=None):
+    """Helper: mimics (points, next_page_offset) returned by Qdrant scroll."""
+    return points, next_offset
+
+
+def _point(domain: str, source_file_id: str):
+    p = MagicMock()
+    p.payload = {"domain": domain, "source_file_id": source_file_id}
+    return p
+
+
+class TestQdrantServiceGetTree:
+    def _svc(self, client):
+        client.get_collection.return_value = MagicMock()
+        return QdrantService(host="localhost", port=6333)
+
+    def test_empty_collection_returns_empty_dict(self):
+        with patch("app.services.qdrant_service.QdrantClient") as MockClient:
+            client = MockClient.return_value
+            svc = self._svc(client)
+            client.scroll.return_value = _make_scroll_page([])
+            result = svc.get_tree()
+            assert result == {}
+
+    def test_groups_file_ids_by_domain(self):
+        with patch("app.services.qdrant_service.QdrantClient") as MockClient:
+            client = MockClient.return_value
+            svc = self._svc(client)
+            points = [
+                _point("退休规划", "file-a"),
+                _point("退休规划", "file-b"),
+                _point("税务策略", "file-c"),
+            ]
+            client.scroll.return_value = _make_scroll_page(points)
+            result = svc.get_tree()
+            assert set(result.keys()) == {"退休规划", "税务策略"}
+            assert set(result["退休规划"]) == {"file-a", "file-b"}
+            assert result["税务策略"] == ["file-c"]
+
+    def test_deduplicates_chunks_from_same_file(self):
+        with patch("app.services.qdrant_service.QdrantClient") as MockClient:
+            client = MockClient.return_value
+            svc = self._svc(client)
+            # 15 chunks, all from file-x in same domain
+            points = [_point("退休规划", "file-x") for _ in range(15)]
+            client.scroll.return_value = _make_scroll_page(points)
+            result = svc.get_tree()
+            assert result == {"退休规划": ["file-x"]}
+
+    def test_paginates_until_no_next_offset(self):
+        with patch("app.services.qdrant_service.QdrantClient") as MockClient:
+            client = MockClient.return_value
+            svc = self._svc(client)
+            page1 = ([_point("退休规划", "file-a")], "cursor-1")
+            page2 = ([_point("税务策略", "file-b")], None)
+            client.scroll.side_effect = [page1, page2]
+            result = svc.get_tree()
+            assert set(result.keys()) == {"退休规划", "税务策略"}
+            assert client.scroll.call_count == 2
+
+
 class TestQdrantServiceSearchPrivate:
     def test_search_private_requires_user_id(self):
         with patch("app.services.qdrant_service.QdrantClient") as MockClient:

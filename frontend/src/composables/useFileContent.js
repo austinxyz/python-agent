@@ -1,4 +1,6 @@
 import { ref } from 'vue'
+import { marked } from 'marked'
+import DOMPurify from 'dompurify'
 
 export function useFileContent() {
   const loading = ref(false)
@@ -39,18 +41,6 @@ export function escapeHtml(str) {
 }
 
 export function markdownToHtml(md) {
-  return escapeHtml(md)
-    .replace(/^### (.+)$/gm, '<h3>$1</h3>')
-    .replace(/^## (.+)$/gm, '<h2>$1</h2>')
-    .replace(/^# (.+)$/gm, '<h1>$1</h1>')
-    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-    .replace(/\*(.+?)\*/g, '<em>$1</em>')
-    .replace(/`([^`]+)`/g, '<code>$1</code>')
-    .replace(/```[\w]*\n([\s\S]*?)```/g, '<pre><code>$1</code></pre>')
-    .replace(/^[-*] (.+)$/gm, '<li>$1</li>')
-    .replace(/(<li>[\s\S]*?<\/li>)/g, '<ul>$1</ul>')
-    .replace(/\n\n+/g, '</p><p>')
-    .replace(/^(?!<[a-z])(.+)$/gm, (_, line) => line ? line : '')
-    .replace(/^(.+)/, '<p>$1')
-    .replace(/(.+)$/, '$1</p>')
+  const raw = marked.parse(md)
+  return DOMPurify.sanitize(raw)
 }

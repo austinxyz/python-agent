@@ -67,6 +67,28 @@ class QdrantService:
             query_filter=models.Filter(must=conditions),
         )
 
+    def get_tree(self, page_size: int = 100) -> dict[str, list[str]]:
+        # TODO: for large collections, replace with a SQLite materialized view
+        # of (file_id, domain) pairs to avoid O(n) scroll cost.
+        seen: dict[str, set[str]] = {}  # domain -> set of source_file_ids
+        offset = None
+        first = True
+        while first or offset is not None:
+            first = False
+            points, offset = self._client.scroll(
+                collection_name=KNOWLEDGE_COLLECTION,
+                limit=page_size,
+                offset=offset,
+                with_payload=True,
+                with_vectors=False,
+            )
+            for point in points:
+                domain = (point.payload or {}).get("domain", "")
+                file_id = (point.payload or {}).get("source_file_id", "")
+                if domain and file_id:
+                    seen.setdefault(domain, set()).add(file_id)
+        return {domain: sorted(ids) for domain, ids in seen.items()}
+
     def upsert_knowledge(self, points: list[models.PointStruct]) -> None:
         self._client.upsert(collection_name=KNOWLEDGE_COLLECTION, points=points)
 
