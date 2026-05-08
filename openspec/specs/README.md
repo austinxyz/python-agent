@@ -42,7 +42,7 @@
 - Vue 3 SPA 骨架（Vite + Pinia + Vue Router），可折叠左侧导航（展开 w-56 / 收起 w-16）+ 主内容区布局
 - 四个路由：`/wiki` · `/ingest` · `/chat` · `/private`，每页占位内容
 - 通用 `TreeNav.vue` 组件（展开/折叠、选中高亮、节点数量徽章）
-- **Tailwind CSS + lucide-vue-next 设计系统**，蓝紫渐变浅色主题（非暗色主题）；详见 `docs/frontend-ui-guide.md`
+- **Tailwind CSS + lucide-vue-next 设计系统**，浅色主题，遵循 Notion DESIGN.md（brand-navy hero band + 紫色 primary CTA + pastel feature cards）；详见 `docs/design/notion.md`
 
 **验收标准**：`docker compose up` 后访问 `localhost:3000`，四个导航页切换正常，`/api/health` 返回 200。
 

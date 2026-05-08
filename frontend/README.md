@@ -58,5 +58,5 @@ E2E tests live in `frontend/e2e/`. Test data is isolated by reserved prefix `__e
 
 ## Reference
 
-- UI design system: `../docs/frontend-ui-guide.md`
+- UI design system: `../docs/design/notion.md` (authoritative); see `../docs/design/README.md`
 - Project pitfalls / conventions: `../CLAUDE.md`

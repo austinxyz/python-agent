@@ -12,7 +12,6 @@ matching UI without re-deciding fundamentals each time.
 |---|---|
 | **`notion.md`** | **Primary** — Notion's design system. Authoritative source for new components. Light-first (matches current direction), navy hero band, purple pill CTAs, illustration-rich. |
 | `linear.md` | **Backup** — Linear's design system (dark-first, single lavender accent, Linear Display type). Use only if `notion.md` is rejected after first migration attempt. |
-| `../frontend-ui-guide.md` | **Legacy** — captures the V1 gradient/light-bg style. Existing components match this; new work should NOT extend it. Migrating incrementally to `notion.md` is the goal. |
 
 ## How to use
 

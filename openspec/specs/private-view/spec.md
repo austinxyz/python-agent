@@ -4,7 +4,7 @@
 TBD - created by archiving change private-data. Update Purpose after archive.
 ## Requirements
 ### Requirement: PrivateView renders two-section layout
-The system SHALL replace `frontend/src/views/PrivateView.vue` stub with a full page. The page SHALL have a gradient header (following `docs/frontend-ui-guide.md`). Below the header, the page is divided into two vertical sections: the upper section shows structured template entries, and the lower section shows private notes in a directory tree. The Pinia `private.js` store manages all state.
+The system SHALL replace `frontend/src/views/PrivateView.vue` stub with a full page. The page SHALL have a header following `docs/design/notion.md` (brand-navy hero band). Below the header, the page is divided into two vertical sections: the upper section shows structured template entries, and the lower section shows private notes in a directory tree. The Pinia `private.js` store manages all state.
 
 #### Scenario: PrivateView mounts and loads data
 - **WHEN** the user navigates to `/private`

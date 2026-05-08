@@ -58,14 +58,14 @@ The system SHALL provide `frontend/src/stores/wiki.js` as a Pinia store. It MUST
 - **THEN** `filteredTree` equals `tree` (no entries filtered out)
 
 ### Requirement: WikiView layout — two-column browser mirroring IngestView
-The system SHALL replace the `WikiView.vue` stub with a two-column layout identical in structure to `IngestView.vue`: a fixed left sidebar (≈200px) and a right panel that occupies the remaining width. The overall page structure, header gradient, sidebar section header style, and list item active/hover styles SHALL follow the patterns in `docs/frontend-ui-guide.md`. The `rightPanelState` ref SHALL have exactly two values: `'welcome'` (default on mount) and `'content'` (file selected). There is no domain-info state and no form state — this page is read-only.
+The system SHALL replace the `WikiView.vue` stub with a two-column layout identical in structure to `IngestView.vue`: a fixed left sidebar (≈200px) and a right panel that occupies the remaining width. The overall page structure, header treatment, sidebar section header style, and list item active/hover styles SHALL follow the patterns in `docs/design/notion.md`. The `rightPanelState` ref SHALL have exactly two values: `'welcome'` (default on mount) and `'content'` (file selected). There is no domain-info state and no form state — this page is read-only.
 
 #### Scenario: Default state is welcome
 - **WHEN** `WikiView` mounts with no prior selection
 - **THEN** `rightPanelState` equals `'welcome'` and a welcome placeholder is shown in the right panel
 
 ### Requirement: WikiView left sidebar — search input and collapsible domain groups
-The system SHALL render a persistent left sidebar inside `WikiView.vue`. The sidebar SHALL have a search input at the top, bound to `store.searchQuery`, with placeholder "搜索知识条目…". Below the search input, the sidebar SHALL display all domains that have at least one matching file as collapsible groups, sourced from `store.filteredTree`. Each group SHALL show: a chevron icon (rotated when expanded), the domain name as bold text, and a file count badge. Clicking the chevron toggles the group open/closed. Under an expanded group, the sidebar SHALL list the `title` (or `orig_name` if `title` is null) of every matching file entry as a clickable item. Clicking a file title SHALL call `store.selectFile(file_id)` and set `rightPanelState` to `'content'`. The selected file title SHALL be highlighted with the active list-item style from `docs/frontend-ui-guide.md`.
+The system SHALL render a persistent left sidebar inside `WikiView.vue`. The sidebar SHALL have a search input at the top, bound to `store.searchQuery`, with placeholder "搜索知识条目…". Below the search input, the sidebar SHALL display all domains that have at least one matching file as collapsible groups, sourced from `store.filteredTree`. Each group SHALL show: a chevron icon (rotated when expanded), the domain name as bold text, and a file count badge. Clicking the chevron toggles the group open/closed. Under an expanded group, the sidebar SHALL list the `title` (or `orig_name` if `title` is null) of every matching file entry as a clickable item. Clicking a file title SHALL call `store.selectFile(file_id)` and set `rightPanelState` to `'content'`. The selected file title SHALL be highlighted with the active list-item style from `docs/design/notion.md`.
 
 #### Scenario: Domains with files are visible on mount
 - **WHEN** `WikiView` mounts and the tree has files in 3 domains
@@ -92,7 +92,7 @@ The system SHALL render a persistent left sidebar inside `WikiView.vue`. The sid
 - **THEN** it does not appear in the sidebar
 
 ### Requirement: WikiView right panel — content viewer
-When `rightPanelState === 'content'`, the right panel SHALL display a fixed header bar (gradient, following `docs/frontend-ui-guide.md` right-panel pattern) showing the entry title (or orig_name) and a domain badge, followed by a scrollable content area. The content area SHALL fetch and render the file content via the `useFileContent` composable (`load(file_id, filename)`). Files with no stored `filename` SHALL show a "无原始文件可预览" placeholder without making a network request. A "下载原文" button in the header SHALL link to `GET /api/files/{file_id}/download` as a download attachment.
+When `rightPanelState === 'content'`, the right panel SHALL display a fixed header bar (following `docs/design/notion.md` right-panel pattern: bg-canvas with hairline bottom border) showing the entry title (or orig_name) and a domain badge, followed by a scrollable content area. The content area SHALL fetch and render the file content via the `useFileContent` composable (`load(file_id, filename)`). Files with no stored `filename` SHALL show a "无原始文件可预览" placeholder without making a network request. A "下载原文" button in the header SHALL link to `GET /api/files/{file_id}/download` as a download attachment.
 
 #### Scenario: Content loads when file is selected
 - **WHEN** a file with a stored filename is selected

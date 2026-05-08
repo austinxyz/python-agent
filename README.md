@@ -82,7 +82,7 @@ frontend/
 docs/
   superpowers/specs/   # Design specs
   log/                 # Daily dev logs (YYYY-MM-DD.md)
-  frontend-ui-guide.md # UI design system reference
+  design/              # Authoritative DESIGN.md (notion.md primary, linear.md backup)
 ```
 
 ## Quick Start
@@ -160,5 +160,5 @@ docker compose up --build frontend -d
 ## Design Docs
 
 - Architecture & requirements: `docs/superpowers/specs/2026-05-05-knowledge-agent-design.md`
-- UI design system: `docs/frontend-ui-guide.md`
+- UI design system (authoritative): `docs/design/notion.md` (Linear backup at `docs/design/linear.md`); see `docs/design/README.md` for migration policy
 - Daily dev log: `docs/log/`
