@@ -1,10 +1,12 @@
 flask>=3.0.0
 flask-cors>=4.0.0
 python-dotenv>=1.0.0
-qdrant-client>=1.7.0
+qdrant-client>=1.9.0,<1.10.0  # pin to match server v1.9.2 in docker-compose.yml; v1.13+ removed .search() and v1.10+ added .query_points() that older servers don't accept
 anthropic>=0.25.0
 openai>=1.14.0
 langgraph>=1.1.0,<2.0.0
+langchain-anthropic>=0.3.0
+langchain-openai>=0.3.0
 pymupdf>=1.24.0,<2.0.0   # installs as 'pymupdf'; import as 'import fitz' (compat shim) or 'import pymupdf'
 python-multipart>=0.0.12
 httpx>=0.27.0

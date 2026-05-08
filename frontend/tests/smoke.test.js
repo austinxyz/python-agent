@@ -63,8 +63,15 @@ describe('AppLayout', () => {
 
 
 describe('View skeletons', () => {
+  // Provide a router for views that read route state (WikiView reads
+  // ?file=<id>) or render <router-link> (ChatView source chips).
+  function withRouter() {
+    const router = makeRouter()
+    return { global: { plugins: [router, createPinia()] } }
+  }
+
   it('WikiView renders heading', () => {
-    const wrapper = mount(WikiView)
+    const wrapper = mount(WikiView, withRouter())
     expect(wrapper.find('h1').exists()).toBe(true)
   })
 
@@ -74,12 +81,12 @@ describe('View skeletons', () => {
   })
 
   it('ChatView renders heading', () => {
-    const wrapper = mount(ChatView)
+    const wrapper = mount(ChatView, withRouter())
     expect(wrapper.find('h1').exists()).toBe(true)
   })
 
   it('PrivateView renders heading', () => {
-    const wrapper = mount(PrivateView)
+    const wrapper = mount(PrivateView, withRouter())
     expect(wrapper.find('h1').exists()).toBe(true)
   })
 })

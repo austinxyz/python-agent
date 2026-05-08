@@ -31,7 +31,18 @@ The knowledge base is fully ingested and browsable, but the core value propositi
 ## Non-Goals
 
 - Prompt library management (separate feature)
-- Save-answer-to-private-notes flow (PrivateView change)
 - Multi-user auth (V1 user_id is always "default")
 - Regenerate / thumbs-up actions (post-MVP)
 - MCP data sources for chat context
+
+## Revision 2026-05-08 — Save-answer-to-private-notes promoted to a goal
+
+The original plan listed "Save-answer-to-private-notes" as a non-goal,
+to be deferred to a separate PrivateView change. Once the chat path was
+working end-to-end the user identified the save flow as the immediately
+useful next step — answers grounded in your own knowledge base are most
+valuable when they get pinned alongside the rest of your private data.
+Folding it into qa-chat keeps the UX surface coherent (the `chat_ref`
+column on `notes` was already present from `private-data`; the only
+thing missing was the UI affordance and a backend tweak so the SSE
+`done` event carries the new session's `id`).

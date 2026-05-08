@@ -7,6 +7,12 @@ import { createPinia, setActivePinia } from 'pinia'
 import PrivateView from '../../src/views/PrivateView.vue'
 import { usePrivateStore } from '../../src/stores/private.js'
 
+// PrivateView now uses useRoute() to read ?entry=<id> for chat-source
+// deep-linking. Tests don't need real navigation, so stub the module.
+vi.mock('vue-router', () => ({
+  useRoute: () => ({ query: {} }),
+}))
+
 const TEMPLATES = [
   {
     type: 'tax',

@@ -382,11 +382,13 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted, h } from 'vue'
+import { ref, reactive, computed, onMounted, watch, h } from 'vue'
+import { useRoute } from 'vue-router'
 import { Lock } from 'lucide-vue-next'
 import { usePrivateStore } from '../stores/private.js'
 
 const store = usePrivateStore()
+const route = useRoute()
 
 const rightState = ref('welcome') // welcome | item-view | item-edit | new-entry | new-note
 const selectedItemId = ref(null)
@@ -431,11 +433,37 @@ const selectedItem = computed(() =>
   allItems.value.find(i => i.id === selectedItemId.value) || null
 )
 
-onMounted(() => {
+onMounted(async () => {
+  // Templates load in parallel — the deep-link only needs entries + notes.
   store.fetchTemplates()
-  store.fetchEntries()
-  store.fetchNotes()
+  await Promise.all([store.fetchEntries(), store.fetchNotes()])
+  // Deep-link from ChatView source chips: /private?entry=<id> opens the
+  // matching item directly. Same pattern as WikiView's ?file= handling.
+  if (route.query.entry) openByItemId(String(route.query.entry))
 })
+
+// React to query changes when the user clicks a different chip while still
+// on /private — Vue Router reuses the component, so we watch instead of remount.
+watch(() => route.query.entry, (id) => {
+  if (id) openByItemId(String(id))
+})
+
+function openByItemId(itemId) {
+  // Walk all items (entries + notes) to find the matching id, then expand
+  // every directory segment along its path so the sidebar reveals it.
+  const item = allItems.value.find(i => i.id === itemId)
+  if (!item) return
+  const directory = item.directory || ''
+  const parts = directory.split('/').map(s => s.trim()).filter(Boolean)
+  let path = ''
+  for (const seg of parts) {
+    path = path ? `${path}/${seg}` : seg
+    expandedDirs[path] = true
+  }
+  selectedItemId.value = itemId
+  rightState.value = 'item-view'
+  formError.value = ''
+}
 
 function templateLabel(type) {
   const t = store.templates.find(t => t.type === type)

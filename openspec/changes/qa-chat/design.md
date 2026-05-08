@@ -37,18 +37,20 @@ The design spec at `docs/superpowers/specs/2026-05-05-knowledge-agent-design.md`
 
 ### 2. LangGraph ReAct agent (not a simple chain)
 
-**Choice:** `create_react_agent` from LangGraph with explicit tool definitions.
+**Choice (revised 2026-05-08):** Deferred. V1 ships with a deterministic RAG chain: pre-search Qdrant based on the user-selected `scope` (knowledge / private / both), build a context block from the top chunks, then stream the LLM's answer.
 
-**Rationale:** The agent must decide *whether* to search knowledge, *whether* to search private data, and *which* sources are relevant. A fixed RAG chain can't make those decisions. The ReAct pattern (Reason → Act → Observe loop) naturally handles multi-step retrieval and tool composition.
+**Why the deviation:** The original choice was `create_react_agent` from LangGraph. After implementation review, the ReAct loop adds significant test complexity (mocking `BaseChatModel`, parsing `astream_events` v2 output, handling tool-call events) while V1 single-turn Q&A doesn't actually exercise the multi-step decision-making that ReAct enables. The tools are well-defined and the user explicitly chooses the scope via the toggle UI — no autonomous decision is needed. Promoting to ReAct is straightforward when a multi-step use case (e.g., follow-up clarifying questions, drill-down via `get_entry`) lands.
 
-**Tools:**
+**What's preserved:** The 3 tool functions (`search_knowledge` / `search_private` / `get_entry`) are kept as testable Python functions and are what the V1 chain calls directly. They remain the API the future ReAct agent will plug in to.
+
+**Tools (unchanged):**
 - `search_knowledge(query: str, domain: str | None) → list[Chunk]`: vector search on `knowledge` collection; no user_id filter (shared collection)
 - `search_private(query: str) → list[Chunk]`: vector search on `private` collection; ALWAYS adds `user_id = "default"` filter
 - `get_entry(file_id: str) → str`: fetches full text of a knowledge file from disk (for detailed lookups)
 
 **Alternatives considered:**
-- Simple RAG chain: can't adapt retrieval strategy to question type
-- LangChain agent: project already uses LangGraph (IngestPipeline); staying consistent
+- Original: ReAct via `create_react_agent` — deferred (see "Why the deviation" above)
+- LangChain agent: project already uses LangGraph (IngestPipeline); staying consistent if/when we re-add agentic behavior
 
 ### 3. Streaming tokens from LangGraph
 

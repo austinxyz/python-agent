@@ -77,3 +77,78 @@ The QA agent tools (`search_knowledge`, `search_private`, `get_entry`) SHALL be 
 #### Scenario: search_private called with mock
 - **WHEN** `search_private` is called with a mocked QdrantService
 - **THEN** it calls QdrantService with user_id filter and returns formatted chunks
+
+---
+
+## Revision 2026-05-08 — V1 chain, payload shape, source enrichment
+
+The implementation deviates from the original LangGraph ReAct design (see
+`design.md` §2 "Why the deviation") and ships a deterministic RAG chain
+instead. The functional contract on the SSE stream is unchanged; the
+following requirements capture what the implementation actually delivers
+so the spec matches reality.
+
+### Requirement: V1 agent SHALL ship as a deterministic RAG chain (no autonomous tool dispatch)
+The QA agent SHALL pre-search Qdrant based on the user-selected `scope`,
+build a context block from the retrieved chunks, and stream the LLM's
+answer. Multi-step reasoning, autonomous `get_entry` follow-ups, and
+ReAct-style decision loops SHALL be deferred until a use case for them
+appears. The 3 tool functions remain in place as the public API the
+future ReAct upgrade will plug in to.
+
+#### Scenario: Single-turn Q&A produces a grounded answer
+- **WHEN** a user sends a single query with `scope=["knowledge"]`
+- **THEN** the agent calls `search_knowledge` once, builds a context block, and streams the LLM answer
+
+#### Scenario: No autonomous tool calls in V1
+- **WHEN** the LLM emits text suggesting a follow-up tool call
+- **THEN** V1 ignores the suggestion (no ReAct loop); the answer simply ends
+
+### Requirement: Tool result formatting SHALL read chunk text from the `text` payload key
+The `IngestPipeline` writes chunk content into Qdrant payload key `text`
+(see `ingest_pipeline._embed_node`). The QA agent's `_format_point` helper
+SHALL read `payload.get("text")` first and fall back to `payload.get("content")`
+to remain compatible with any private-entry payloads written under the
+older convention. Reading only `content` is a CRITICAL bug — the LLM
+receives empty context and refuses to answer.
+
+#### Scenario: Knowledge chunk produces non-empty content
+- **WHEN** a Qdrant point's payload contains `{"text": "FBAR 是…"}`
+- **THEN** `search_knowledge` returns a chunk dict whose `content` field is `"FBAR 是…"`
+
+### Requirement: Sources SHALL carry `kind`, `title`, `domain`, `file_id`
+The `done` SSE event's `sources` array SHALL contain objects with all four
+fields. `kind` is `"knowledge"` for chunks from the knowledge collection
+and `"entry"` for chunks from the private collection. `title` is the
+human-readable title looked up from SQLite (`files.title` falling back to
+`files.orig_name` for knowledge; `private_entries.title` for private
+entries; the file_id itself when neither row exists). `domain` is the
+domain string for knowledge and the directory string for private entries.
+The chat UI uses `kind` to route the source chip to the correct page.
+
+#### Scenario: Knowledge source carries kind=knowledge
+- **WHEN** the agent retrieves a chunk from the `knowledge` collection
+- **THEN** the corresponding source in the `done` event has `kind: "knowledge"`
+
+#### Scenario: Private source carries kind=entry
+- **WHEN** the agent retrieves a chunk from the `private` collection
+- **THEN** the corresponding source has `kind: "entry"`
+
+#### Scenario: Title is looked up from SQLite
+- **WHEN** a knowledge chunk references file_id `"abc"` and `files.title` for `"abc"` is `"FBAR"`
+- **THEN** the source's `title` is `"FBAR"`, not `"abc"`
+
+#### Scenario: Title falls back to file_id when SQLite has no row
+- **WHEN** a chunk references a file_id that is not present in `files` or `private_entries`
+- **THEN** the source's `title` is the file_id itself (so the user can still report which document the agent cited)
+
+### Requirement: qdrant-client SHALL be pinned to match the deployed Qdrant server
+The `qdrant-client` Python dependency SHALL be pinned to a version
+compatible with the Qdrant server image declared in `docker-compose.yml`.
+qdrant-client v1.13+ removed the `.search()` method; the deployed server
+v1.9.2 does not yet support `.query_points()`. Allowing the client to
+float caused production to receive `404 Not Found` from Qdrant.
+
+#### Scenario: backend/requirements.txt pins qdrant-client to a server-compatible range
+- **WHEN** a developer runs `pip install -r backend/requirements.txt` against the docker-compose Qdrant version
+- **THEN** the installed qdrant-client supports the `.search()` API used by `QdrantService`

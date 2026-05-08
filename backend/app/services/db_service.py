@@ -12,6 +12,29 @@ class DatabaseService:
         self._ensure_title_column()
         self._ensure_private_tables()
         self._ensure_private_entries_directory_column()
+        self._ensure_chat_tables()
+
+    def _ensure_chat_tables(self) -> None:
+        """Make sure chat_sessions has a `model` column.
+
+        chat_sessions and chat_messages already exist via schema.sql; this
+        migration only adds the model column when running against a legacy
+        DB that predates the qa-chat change.
+        """
+        conn = sqlite3.connect(self._db_path)
+        try:
+            existing = {row[1] for row in conn.execute("PRAGMA table_info(chat_sessions)").fetchall()}
+            if "model" not in existing:
+                try:
+                    conn.execute(
+                        "ALTER TABLE chat_sessions ADD COLUMN model TEXT NOT NULL DEFAULT 'haiku'"
+                    )
+                    conn.commit()
+                except sqlite3.OperationalError as e:
+                    if "duplicate column name" not in str(e):
+                        raise
+        finally:
+            conn.close()
 
     def _ensure_private_entries_directory_column(self) -> None:
         conn = sqlite3.connect(self._db_path)

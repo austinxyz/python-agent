@@ -4,6 +4,12 @@ import { createPinia, setActivePinia } from 'pinia'
 import WikiView from '../../src/views/WikiView.vue'
 import { useWikiStore } from '../../src/stores/wiki.js'
 
+// Stub vue-router for WikiView — it now uses useRoute() to read ?file=<id>
+// for source-chip deep-linking. Tests don't need real navigation.
+vi.mock('vue-router', () => ({
+  useRoute: () => ({ query: {} }),
+}))
+
 const MOCK_TREE = {
   '退休规划': [
     { file_id: 'f1', title: 'Roth IRA指南', orig_name: 'roth.pdf', domain: '退休规划', filename: 'roth.pdf' },

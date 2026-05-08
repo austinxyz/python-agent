@@ -140,11 +140,13 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import { useWikiStore } from '../stores/wiki.js'
 import { useFileContent } from '../composables/useFileContent.js'
 
 const store = useWikiStore()
+const route = useRoute()
 
 const rightPanelState = ref('welcome')
 const expandedDomains = reactive({})
@@ -155,7 +157,21 @@ const viewingFilename = ref('')
 
 const { loading: contentLoading, error: contentError, renderedContent, load: loadContent } = useFileContent()
 
-onMounted(() => store.fetchTree())
+onMounted(async () => {
+  await store.fetchTree()
+  // Deep-link support: /wiki?file=<id> opens the entry directly. Used by
+  // ChatView's source chips so the user can jump from an answer to the
+  // cited document without manually drilling through the sidebar tree.
+  if (route.query.file) {
+    openByFileId(String(route.query.file))
+  }
+})
+
+// React to query changes when the user clicks a different chip while still
+// on /wiki — Vue Router reuses the component, so we watch instead of remount.
+watch(() => route.query.file, (fileId) => {
+  if (fileId) openByFileId(String(fileId))
+})
 
 function toggleExpand(domain) {
   expandedDomains[domain] = !expandedDomains[domain]
@@ -170,6 +186,20 @@ function onEntryClick(entry) {
   rightPanelState.value = 'content'
   if (entry.filename) {
     loadContent(entry.file_id, entry.filename)
+  }
+}
+
+function openByFileId(fileId) {
+  // The wiki tree is keyed by domain → list of entries. Walk it to find
+  // the matching file_id, expand its domain group, and show the content.
+  for (const [domain, entries] of Object.entries(store.tree || {})) {
+    if (!Array.isArray(entries)) continue
+    const entry = entries.find(e => e.file_id === fileId)
+    if (entry) {
+      expandedDomains[domain] = true
+      onEntryClick(entry)
+      return
+    }
   }
 }
 </script>

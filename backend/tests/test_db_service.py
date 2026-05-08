@@ -135,6 +135,68 @@ def test_directory_backfill_does_not_overwrite_existing_values(tmp_path):
         conn.close()
 
 
+def test_chat_sessions_has_model_column_with_haiku_default(tmp_path):
+    db_path = str(tmp_path / "test.db")
+    DatabaseService(db_path=db_path)
+    conn = sqlite3.connect(db_path)
+    try:
+        cols = {row[1]: row[4] for row in conn.execute("PRAGMA table_info(chat_sessions)").fetchall()}
+        assert "model" in cols
+        # Default literal includes the quotes from PRAGMA
+        assert cols["model"] in ("'haiku'", "haiku")
+    finally:
+        conn.close()
+
+
+def test_ensure_chat_tables_adds_model_column_to_legacy_chat_sessions(tmp_path):
+    """A pre-revision DB without the model column gets it added without losing rows."""
+    db_path = str(tmp_path / "test.db")
+    conn = sqlite3.connect(db_path)
+    try:
+        conn.executescript(
+            """
+            CREATE TABLE chat_sessions (
+                id TEXT PRIMARY KEY,
+                user_id TEXT NOT NULL,
+                title TEXT NOT NULL,
+                created_at TEXT NOT NULL DEFAULT (datetime('now')),
+                updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+            );
+            """
+        )
+        conn.execute(
+            "INSERT INTO chat_sessions (id, user_id, title) VALUES ('s1','default','Legacy session')"
+        )
+        conn.commit()
+    finally:
+        conn.close()
+
+    DatabaseService(db_path=db_path)
+
+    conn = sqlite3.connect(db_path)
+    try:
+        cols = {row[1] for row in conn.execute("PRAGMA table_info(chat_sessions)").fetchall()}
+        assert "model" in cols
+        row = conn.execute("SELECT id, model FROM chat_sessions WHERE id='s1'").fetchone()
+        assert row[0] == "s1"
+        # Default backfill is 'haiku' — legacy rows pick up the default
+        assert row[1] == "haiku"
+    finally:
+        conn.close()
+
+
+def test_ensure_chat_tables_is_idempotent(tmp_path):
+    db_path = str(tmp_path / "test.db")
+    DatabaseService(db_path=db_path)
+    DatabaseService(db_path=db_path)  # second init must not raise
+    conn = sqlite3.connect(db_path)
+    try:
+        cols = [row[1] for row in conn.execute("PRAGMA table_info(chat_sessions)").fetchall()]
+        assert cols.count("model") == 1
+    finally:
+        conn.close()
+
+
 def test_ensure_private_entries_directory_column_idempotent(tmp_path):
     """Running the migration again is a no-op."""
     db_path = str(tmp_path / "test.db")
