@@ -68,7 +68,47 @@ FLASK_SECRET_KEY=...
 ## Design Documents
 
 - Architecture & requirements: `docs/superpowers/specs/2026-05-05-knowledge-agent-design.md`
+- **NAS deployment**: `docs/superpowers/specs/2026-05-08-nas-deployment-design.md` — image distribution via Docker Hub, bind-mount prod compose for UGOS Docker Project UI, three-environment isolation.
 - **UI design system (authoritative)**: `docs/design/notion.md` — full DESIGN.md from VoltAgent/awesome-design-md. Light-first, navy hero band, single purple CTA, pastel feature cards. New components MUST cite tokens / patterns from this file rather than inventing them. Backup: `docs/design/linear.md` (dark-first, swap if Notion is rejected). See `docs/design/README.md` for the rationale and migration policy.
+
+## Deployment
+
+The canonical instance lives on the UGREEN NAS at `10.0.0.20`. Local Windows is dev-only.
+
+### Local dev (use the dev:* npm scripts so volumes don't collide with NAS)
+
+```bash
+cd frontend
+npm run dev:up      # cross-env COMPOSE_PROJECT_NAME=python-agent-dev docker compose up -d
+npm run dev:down    # stop, keep volumes
+npm run dev:reset   # down -v, then up — wipes dev data only
+npm run e2e:dev     # ensure dev stack up, then Playwright
+```
+
+The `python-agent-dev_*` named volumes are completely separate from anything on the NAS. Playwright targets `localhost:3000` and never the NAS.
+
+### Push a new image to Docker Hub
+
+```bash
+docker login                         # one-time
+./scripts/build-and-push.sh          # builds linux/amd64, tags :latest + :vYYYYMMDD-<short-sha>, pushes both repos
+```
+
+Two repos: `xuaustin/python-agent-api`, `xuaustin/python-agent-frontend` (public).
+
+### Update the NAS (no ssh)
+
+1. UGOS Docker app → **Project** → python-agent → **Pull** (refreshes `:latest`)
+2. **Restart** (or **Apply**)
+3. Browser: `http://10.0.0.20:8910` — verify
+
+### Rollback
+
+In UGOS file manager, edit `/volume1/docker/python-agent/docker-compose.yml` — change `image: xuaustin/python-agent-api:latest` to a known-good `:vYYYYMMDD-<sha>` tag from Docker Hub. Then UGOS Docker UI → Pull → Apply.
+
+### Ports on NAS
+
+`8910` frontend · `8911` api · `8912` qdrant. The `891x` block is memorable and avoids common UGOS occupants. If a port collides at first deploy, edit `docker-compose.yml` host port and re-Apply.
 
 ## Known Pitfalls (past mistakes)
 
@@ -102,6 +142,12 @@ FLASK_SECRET_KEY=...
 ### Git
 
 - **Local changes may be left uncommitted across sessions**: Always run `git status` before pushing to confirm no unstaged files were left over from a previous session.
+
+### NAS Migration / Deployment
+
+- **`tar -C /src .` form is mandatory for volume export**: When tarring a docker volume for migration, use `tar czf out.tar.gz -C /src .` (note the trailing dot), NOT `tar czf out.tar.gz /src`. The first form archives the *contents* of /src so extraction at the target dir produces a flat layout. The second form preserves the `/src` path component, producing a nested `src/` (or volume-name) subdirectory at the extract target — which means the api container looks for `data/qdrant/collections/...` but finds `data/qdrant/qdrant_data/collections/...` and silently has no data. Pattern locked into `scripts/export-volumes.sh`; round-trip test in `backend/tests/test_export_volumes_script.py`.
+- **Don't reuse named-volume names across compose files**: Local dev uses named volumes (`python-agent_*` or `python-agent-dev_*` via `COMPOSE_PROJECT_NAME`); the NAS prod compose uses bind mounts to `./data/*`. Never copy the prod compose to dev or vice versa — the volume mount syntax is different (`./data/qdrant:/qdrant/storage` vs `qdrant_data:/qdrant/storage`).
+- **Local docker-compose work after migration must use `COMPOSE_PROJECT_NAME=python-agent-dev`**: After Phase 4 of the NAS migration wipes the original `python-agent_*` volumes on Windows, any plain `docker compose up` would re-create empty named volumes with the original names, drifting from the NAS. Always use `npm run dev:up` (or set the env var manually) so dev volumes are namespaced.
 
 ## Dev Log Practice
 

@@ -1,0 +1,41 @@
+# NAS-target compose file. Used on UGREEN NAS via UGOS Docker Project UI.
+# Local dev uses docker-compose.yml (named volumes, build-in-place).
+# See docs/superpowers/specs/2026-05-08-nas-deployment-design.md.
+services:
+  qdrant:
+    image: qdrant/qdrant:v1.9.2
+    container_name: python-agent-qdrant
+    restart: unless-stopped
+    ports:
+      - "8912:6333"
+    volumes:
+      - ./data/qdrant:/qdrant/storage
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c 'echo > /dev/tcp/localhost/6333'"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+  api:
+    image: xuaustin/python-agent-api:latest
+    container_name: python-agent-api
+    restart: unless-stopped
+    ports:
+      - "8911:5000"
+    env_file: .env
+    volumes:
+      - ./data/sqlite:/app/data
+      - ./data/uploads:/app/uploads
+    depends_on:
+      qdrant:
+        condition: service_healthy
+
+  frontend:
+    image: xuaustin/python-agent-frontend:latest
+    container_name: python-agent-frontend
+    restart: unless-stopped
+    ports:
+      - "8910:3000"
+    depends_on:
+      - api
