@@ -1,56 +1,54 @@
 <template>
-  <div class="h-screen flex flex-col bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50">
+  <!--
+    IngestView — redesigned 2026-05-08 against docs/design/notion.md.
+    Same data-* selectors as before; only the visual layer changed.
+  -->
+  <div class="h-screen flex flex-col bg-notion-surface-soft text-notion-ink">
 
-    <!-- Page Header -->
-    <div class="bg-gradient-to-r from-blue-600 to-purple-600 shadow-lg px-6 py-4 flex-shrink-0">
-      <h1 class="text-2xl font-bold text-white">原始材料库</h1>
-      <p class="text-xs text-blue-100 mt-1">摄入文件、网页或文本，按领域分类管理</p>
+    <!-- Page Header — brand-navy hero band -->
+    <div class="bg-notion-brand-navy text-notion-on-dark px-6 py-5 flex-shrink-0">
+      <h1 class="text-xl font-semibold tracking-tight leading-tight">原始材料库</h1>
+      <p class="text-[13px] text-notion-on-dark-muted mt-0.5">摄入文件、网页或文本，按领域分类管理</p>
     </div>
 
-    <!-- Main: Two-column layout -->
+    <!-- Two-column layout -->
     <div class="flex-1 flex overflow-hidden">
 
       <!-- LEFT SIDEBAR -->
-      <div class="w-60 flex-shrink-0 bg-white border-r border-gray-200 flex flex-col shadow-lg">
-        <!-- Sidebar header -->
-        <div class="px-4 py-3 border-b border-gray-200 bg-gradient-to-r from-indigo-500 to-purple-500">
-          <h2 class="text-sm font-semibold text-white">📚 领域分类</h2>
-          <p class="text-xs text-indigo-100 mt-0.5">共 {{ files.length }} 个文件</p>
+      <div class="w-60 flex-shrink-0 bg-notion-canvas border-r border-notion-hairline flex flex-col">
+        <div class="px-4 py-3 border-b border-notion-hairline-soft flex items-center justify-between">
+          <h2 class="text-[11px] font-semibold uppercase tracking-[0.08em] text-notion-steel">领域分类</h2>
+          <span class="text-[11px] text-notion-stone">{{ files.length }} 个文件</span>
         </div>
 
-        <!-- Domain list -->
-        <div class="flex-1 overflow-y-auto">
+        <div class="flex-1 overflow-y-auto py-1">
           <div v-for="d in DOMAINS" :key="d">
-
-            <!-- Domain row -->
             <div
               :class="[
-                'flex items-center gap-2 px-3 py-3 border-b border-gray-100 cursor-pointer transition-all duration-200',
+                'flex items-center gap-2 px-3 py-2 cursor-pointer transition-colors',
                 selectedDomain === d && rightPanelState !== 'welcome'
-                  ? 'bg-gradient-to-r from-blue-50 to-purple-50 border-l-4 border-l-blue-600 shadow-sm'
-                  : 'hover:bg-gradient-to-r hover:from-gray-50 hover:to-blue-50 hover:shadow-sm'
+                  ? 'bg-notion-surface border-l-2 border-l-notion-primary'
+                  : 'hover:bg-notion-surface'
               ]"
             >
               <span
                 data-domain-name
-                class="flex-1 text-sm font-bold text-gray-800 truncate"
+                class="flex-1 text-[13px] font-medium text-notion-charcoal truncate"
                 @click="onDomainNameClick(d)"
               >{{ d }}</span>
 
-              <!-- File count badge -->
               <span
                 v-if="filesForDomain(d).length > 0"
-                class="px-2 py-0.5 text-[10px] font-bold rounded-full bg-indigo-100 text-indigo-600 flex-shrink-0"
-              >{{ filesForDomain(d).length }} 篇</span>
+                class="px-1.5 py-0.5 text-[11px] font-semibold rounded-full bg-notion-surface border border-notion-hairline text-notion-steel flex-shrink-0"
+              >{{ filesForDomain(d).length }}</span>
 
-              <!-- SVG chevron -->
               <button
                 data-domain-chevron
-                class="flex-shrink-0 text-gray-300 hover:text-indigo-500 transition-colors p-0.5"
+                class="flex-shrink-0 text-notion-stone hover:text-notion-steel transition-colors p-0.5"
                 @click.stop="toggleExpand(d)"
               >
                 <svg
-                  class="w-3.5 h-3.5 transition-transform duration-200"
+                  class="w-3 h-3 transition-transform duration-200"
                   :class="expandedDomains[d] ? 'rotate-90' : ''"
                   viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
                 >
@@ -59,9 +57,8 @@
               </button>
             </div>
 
-            <!-- Expanded file list -->
-            <div v-if="expandedDomains[d]" class="bg-gray-50 border-b border-gray-100">
-              <div v-if="filesForDomain(d).length === 0" class="px-6 py-2.5 text-xs text-gray-400 italic">
+            <div v-if="expandedDomains[d]" class="bg-notion-surface-soft">
+              <div v-if="filesForDomain(d).length === 0" class="px-6 py-2 text-[12px] text-notion-stone italic">
                 暂无文件
               </div>
               <button
@@ -69,79 +66,77 @@
                 :key="file.file_id"
                 data-sidebar-file
                 :class="[
-                  'w-full text-left px-5 py-2 text-xs transition-all duration-200 block border-b border-gray-100 last:border-0',
+                  'w-full text-left px-6 py-1.5 text-[13px] block transition-colors',
                   viewingFileId === file.file_id
-                    ? 'bg-gradient-to-r from-indigo-50 to-purple-50 text-indigo-700 font-semibold border-l-2 border-l-indigo-500'
-                    : 'text-gray-600 hover:bg-white hover:text-indigo-600'
+                    ? 'bg-notion-canvas text-notion-ink font-medium border-l-2 border-l-notion-primary'
+                    : 'text-notion-slate hover:bg-notion-canvas hover:text-notion-ink'
                 ]"
                 @click="onFileClick(file)"
               >
                 <span class="truncate block leading-relaxed">{{ file.title || file.orig_name }}</span>
               </button>
             </div>
-
           </div>
         </div>
       </div>
 
       <!-- RIGHT PANEL -->
-      <div class="flex-1 overflow-y-auto">
+      <div class="flex-1 overflow-y-auto bg-notion-surface-soft">
 
-        <!-- Welcome state -->
-        <div v-if="rightPanelState === 'welcome'" data-panel="welcome" class="h-full flex items-center justify-center">
-          <div class="text-center">
-            <div class="w-20 h-20 mx-auto mb-6 bg-gradient-to-br from-blue-100 to-purple-100 rounded-2xl flex items-center justify-center shadow-lg">
-              <span class="text-4xl">📚</span>
+        <!-- Welcome -->
+        <div v-if="rightPanelState === 'welcome'" data-panel="welcome" class="h-full flex items-center justify-center px-8">
+          <div class="text-center max-w-md">
+            <div class="w-14 h-14 mx-auto mb-5 rounded-md bg-notion-tint-lavender flex items-center justify-center">
+              <svg class="w-7 h-7 text-notion-brand-purple-800" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 19v-7m0 0L8 16m4-4l4 4M20 7H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z"/></svg>
             </div>
-            <h2 class="text-xl font-bold text-gray-800 mb-2">欢迎使用原始材料库</h2>
-            <p class="text-sm text-gray-500">从左侧选择领域开始浏览，或新建摄入</p>
+            <h2 class="text-lg font-semibold text-notion-ink mb-2">欢迎使用原始材料库</h2>
+            <p class="text-[14px] text-notion-slate leading-relaxed">从左侧选择领域开始浏览，或新建摄入。</p>
           </div>
         </div>
 
         <!-- Domain state -->
         <div v-else-if="rightPanelState === 'domain'" data-panel="domain" class="h-full flex flex-col">
-          <div class="bg-gradient-to-r from-indigo-600 to-purple-600 px-6 py-4 flex-shrink-0 shadow-md">
+          <div class="bg-notion-canvas border-b border-notion-hairline px-8 py-5 flex-shrink-0">
             <div class="flex items-center justify-between">
               <div>
-                <h2 class="text-lg font-bold text-white">{{ selectedDomain }}</h2>
-                <p class="text-xs text-indigo-100 mt-0.5">{{ filesForDomain(selectedDomain).length }} 个文件</p>
+                <h2 class="text-[22px] font-semibold tracking-tight text-notion-ink">{{ selectedDomain }}</h2>
+                <p class="text-[12px] text-notion-steel mt-0.5">{{ filesForDomain(selectedDomain).length }} 个文件</p>
               </div>
               <button
                 data-action="new-ingest"
-                class="px-4 py-2 bg-gradient-to-r from-green-400 to-emerald-500 hover:from-green-500 hover:to-emerald-600 text-white text-sm font-bold rounded-lg shadow-md hover:shadow-lg transition-all duration-200"
+                class="h-9 px-4 bg-notion-primary hover:bg-notion-primary-pressed text-notion-on-primary text-[13px] font-medium rounded-md transition-colors"
                 @click="openForm"
               >+ 新建摄入</button>
             </div>
           </div>
 
-          <div class="flex-1 p-6 overflow-y-auto">
-            <div v-if="filesForDomain(selectedDomain).length === 0" class="flex flex-col items-center justify-center h-48 text-gray-400">
-              <span class="text-4xl mb-3">📂</span>
-              <p class="text-sm">该领域暂无文件</p>
-              <p class="text-xs mt-1">点击右上角「+ 新建摄入」添加</p>
+          <div class="flex-1 px-8 py-6 overflow-y-auto">
+            <div v-if="filesForDomain(selectedDomain).length === 0" class="flex flex-col items-center justify-center h-48 text-notion-stone">
+              <p class="text-[14px]">该领域暂无文件</p>
+              <p class="text-[12px] mt-1 text-notion-muted-text">点击右上角「+ 新建摄入」添加</p>
             </div>
-            <div v-else class="space-y-3">
+            <div v-else class="space-y-2 max-w-3xl">
               <div
                 v-for="file in filesForDomain(selectedDomain)"
                 :key="file.file_id"
-                class="group bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-all duration-200 p-4"
+                class="group bg-notion-canvas rounded-lg border border-notion-hairline hover:border-notion-hairline-strong transition-colors p-4"
               >
                 <!-- Edit mode -->
                 <div v-if="editingFileId === file.file_id" class="flex items-center gap-2">
                   <input
                     ref="editInputRef"
                     v-model="editingTitle"
-                    class="flex-1 px-3 py-2 rounded-lg border-2 border-indigo-300 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent"
+                    class="flex-1 h-10 px-3 rounded-md border border-notion-primary text-[14px] text-notion-ink focus:outline-none focus:ring-1 focus:ring-notion-primary"
                     placeholder="输入标题"
                     @keydown.enter="confirmEdit(file)"
                     @keydown.esc="cancelEdit"
                   />
                   <button
-                    class="px-3 py-2 bg-gradient-to-r from-indigo-500 to-purple-500 text-white text-xs font-bold rounded-lg hover:shadow-md transition-all"
+                    class="h-10 px-3 bg-notion-primary hover:bg-notion-primary-pressed text-notion-on-primary text-[13px] font-medium rounded-md transition-colors"
                     @click="confirmEdit(file)"
                   >保存</button>
                   <button
-                    class="px-3 py-2 bg-gray-100 text-gray-600 text-xs font-bold rounded-lg hover:bg-gray-200 transition-all"
+                    class="h-10 px-3 bg-transparent hover:bg-notion-surface text-notion-ink text-[13px] font-medium rounded-md border border-notion-hairline-strong transition-colors"
                     @click="cancelEdit"
                   >取消</button>
                 </div>
@@ -149,20 +144,27 @@
                 <!-- Normal mode -->
                 <div v-else class="flex items-start gap-3">
                   <div
-                    class="w-9 h-9 bg-gradient-to-br from-blue-100 to-purple-100 rounded-lg flex items-center justify-center flex-shrink-0 cursor-pointer"
+                    :class="[
+                      'w-9 h-9 rounded-md flex items-center justify-center flex-shrink-0 cursor-pointer text-[14px] font-semibold',
+                      file.source_type === 'url'
+                        ? 'bg-notion-tint-sky text-notion-link-blue'
+                        : file.source_type === 'file'
+                          ? 'bg-notion-tint-mint text-notion-brand-green'
+                          : 'bg-notion-tint-lavender text-notion-brand-purple-800',
+                    ]"
                     @click="onFileClick(file)"
                   >
-                    <span class="text-base">{{ file.source_type === 'url' ? '🌐' : file.source_type === 'file' ? '📄' : '📝' }}</span>
+                    <span>{{ file.source_type === 'url' ? 'URL' : file.source_type === 'file' ? 'F' : 'T' }}</span>
                   </div>
                   <div class="flex-1 min-w-0 cursor-pointer" @click="onFileClick(file)">
-                    <p class="text-sm font-semibold text-gray-800 leading-snug">{{ file.title || file.orig_name }}</p>
-                    <p class="text-xs text-gray-400 mt-0.5 truncate">{{ file.orig_name }}</p>
+                    <p class="text-[14px] font-medium text-notion-ink leading-snug">{{ file.title || file.orig_name }}</p>
+                    <p class="text-[12px] text-notion-stone mt-0.5 truncate">{{ file.orig_name }}</p>
                   </div>
                   <button
-                    class="opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 px-2 py-1 text-xs text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg"
+                    class="opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 h-7 px-2 text-[12px] text-notion-steel hover:text-notion-ink hover:bg-notion-surface rounded-md"
                     @click.stop="startEdit(file)"
                     title="编辑标题"
-                  >✏️</button>
+                  >编辑</button>
                 </div>
               </div>
             </div>
@@ -171,66 +173,66 @@
 
         <!-- Form state -->
         <div v-else-if="rightPanelState === 'form'" data-panel="form" class="h-full flex flex-col">
-          <div class="bg-gradient-to-r from-indigo-600 to-purple-600 px-6 py-4 flex-shrink-0 shadow-md">
+          <div class="bg-notion-canvas border-b border-notion-hairline px-8 py-5 flex-shrink-0">
             <div class="flex items-center gap-3">
-              <button class="text-indigo-200 hover:text-white transition-colors text-sm" @click="rightPanelState = 'domain'">← 返回</button>
-              <span class="text-indigo-300">|</span>
-              <span data-domain-badge class="px-3 py-1 text-xs font-semibold rounded-full bg-white/20 text-white">{{ selectedDomain }}</span>
-              <h2 class="text-lg font-bold text-white">新建摄入</h2>
+              <button class="text-[13px] text-notion-steel hover:text-notion-ink transition-colors" @click="rightPanelState = 'domain'">← 返回</button>
+              <span class="text-notion-hairline-strong">|</span>
+              <span data-domain-badge class="px-2.5 py-1 text-[12px] font-semibold rounded-md bg-notion-tint-lavender text-notion-brand-purple-800">{{ selectedDomain }}</span>
+              <h2 class="text-[18px] font-semibold text-notion-ink">新建摄入</h2>
             </div>
           </div>
 
-          <div class="flex-1 overflow-y-auto p-6">
-            <div class="max-w-lg space-y-5">
+          <div class="flex-1 overflow-y-auto px-8 py-6">
+            <div class="max-w-2xl space-y-4">
 
               <!-- Title -->
-              <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
-                <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
-                  标题 <span class="text-red-400">*</span>
+              <div class="bg-notion-canvas rounded-lg border border-notion-hairline p-5">
+                <label class="block text-[11px] font-semibold uppercase tracking-[0.08em] text-notion-steel mb-1.5">
+                  标题 <span class="text-notion-error">*</span>
                 </label>
                 <input
                   data-input="title"
                   type="text"
                   v-model="formTitle"
                   placeholder="为这篇内容起一个标题"
-                  class="w-full px-3 py-2.5 rounded-lg border border-gray-200 bg-gray-50 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent transition-all"
+                  class="w-full h-11 px-3 bg-notion-canvas border border-notion-hairline-strong text-notion-ink text-[14px] rounded-md placeholder:text-notion-stone focus:outline-none focus:border-notion-primary focus:ring-1 focus:ring-notion-primary"
                 />
               </div>
 
               <!-- Source type -->
-              <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
-                <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">摄入方式</label>
-                <div class="flex gap-2 mb-4">
+              <div class="bg-notion-canvas rounded-lg border border-notion-hairline p-5 space-y-4">
+                <label class="block text-[11px] font-semibold uppercase tracking-[0.08em] text-notion-steel">摄入方式</label>
+                <div class="flex gap-2">
                   <button
                     data-source-type="url"
                     :class="[
-                      'flex-1 py-2 rounded-lg text-sm font-semibold transition-all duration-200 border-2',
+                      'flex-1 h-9 rounded-md text-[13px] font-medium transition-colors',
                       sourceType === 'url'
-                        ? 'bg-gradient-to-r from-blue-500 to-indigo-500 text-white border-transparent shadow-md'
-                        : 'bg-white text-gray-600 border-gray-200 hover:border-indigo-300 hover:text-indigo-600'
+                        ? 'bg-notion-ink-deep text-notion-on-dark'
+                        : 'bg-transparent text-notion-charcoal border border-notion-hairline-strong hover:bg-notion-surface'
                     ]"
                     @click="sourceType = 'url'"
-                  >🌐 URL</button>
+                  >URL</button>
                   <button
                     data-source-type="text"
                     :class="[
-                      'flex-1 py-2 rounded-lg text-sm font-semibold transition-all duration-200 border-2',
+                      'flex-1 h-9 rounded-md text-[13px] font-medium transition-colors',
                       sourceType === 'text'
-                        ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white border-transparent shadow-md'
-                        : 'bg-white text-gray-600 border-gray-200 hover:border-purple-300 hover:text-purple-600'
+                        ? 'bg-notion-ink-deep text-notion-on-dark'
+                        : 'bg-transparent text-notion-charcoal border border-notion-hairline-strong hover:bg-notion-surface'
                     ]"
                     @click="sourceType = 'text'"
-                  >📝 文本</button>
+                  >文本</button>
                   <button
                     data-source-type="file"
                     :class="[
-                      'flex-1 py-2 rounded-lg text-sm font-semibold transition-all duration-200 border-2',
+                      'flex-1 h-9 rounded-md text-[13px] font-medium transition-colors',
                       sourceType === 'file'
-                        ? 'bg-gradient-to-r from-green-500 to-emerald-500 text-white border-transparent shadow-md'
-                        : 'bg-white text-gray-600 border-gray-200 hover:border-green-300 hover:text-green-600'
+                        ? 'bg-notion-ink-deep text-notion-on-dark'
+                        : 'bg-transparent text-notion-charcoal border border-notion-hairline-strong hover:bg-notion-surface'
                     ]"
                     @click="sourceType = 'file'"
-                  >📄 文件</button>
+                  >文件</button>
                 </div>
 
                 <div v-if="sourceType === 'url'">
@@ -239,7 +241,7 @@
                     type="url"
                     v-model="sourceUrl"
                     placeholder="https://example.com/article"
-                    class="w-full px-3 py-2.5 rounded-lg border border-gray-200 bg-gray-50 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent transition-all"
+                    class="w-full h-11 px-3 bg-notion-canvas border border-notion-hairline-strong text-notion-ink text-[14px] rounded-md placeholder:text-notion-stone focus:outline-none focus:border-notion-primary focus:ring-1 focus:ring-notion-primary"
                   />
                 </div>
 
@@ -248,24 +250,23 @@
                     data-input="content"
                     v-model="textContent"
                     placeholder="粘贴文本内容…"
-                    class="w-full px-3 py-2.5 rounded-lg border border-gray-200 bg-gray-50 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-400 focus:border-transparent transition-all resize-y"
+                    class="w-full px-3 py-2 bg-notion-canvas border border-notion-hairline-strong text-notion-ink text-[14px] rounded-md placeholder:text-notion-stone focus:outline-none focus:border-notion-primary focus:ring-1 focus:ring-notion-primary resize-y"
                     style="min-height: 55vh"
                   />
                 </div>
 
                 <div v-if="sourceType === 'file'">
-                  <label class="flex flex-col items-center justify-center w-full h-28 border-2 border-dashed border-indigo-200 rounded-lg cursor-pointer bg-indigo-50/30 hover:bg-indigo-50 transition-all">
-                    <span class="text-2xl mb-1">📁</span>
-                    <span class="text-sm text-indigo-600 font-medium">{{ selectedFile ? selectedFile.name : '点击或拖拽文件到此处' }}</span>
-                    <span class="text-xs text-gray-400 mt-0.5">支持 PDF、TXT、MD 等格式</span>
+                  <label class="flex flex-col items-center justify-center w-full h-28 border border-dashed border-notion-hairline-strong rounded-md cursor-pointer bg-notion-surface-soft hover:bg-notion-surface transition-colors">
+                    <span class="text-[14px] text-notion-charcoal font-medium">{{ selectedFile ? selectedFile.name : '点击或拖拽文件到此处' }}</span>
+                    <span class="text-[12px] text-notion-stone mt-1">支持 PDF、TXT、MD 等格式</span>
                     <input data-input="file" type="file" class="hidden" @change="onFileChange" />
                   </label>
                 </div>
               </div>
 
               <!-- Error -->
-              <div v-if="formError" data-ingest-error class="flex items-center gap-2 px-4 py-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-600 shadow-sm">
-                <span>⚠️</span> {{ formError }}
+              <div v-if="formError" data-ingest-error class="px-4 py-3 bg-notion-tint-rose border border-notion-hairline rounded-md text-[13px] text-notion-error">
+                {{ formError }}
               </div>
 
               <!-- Submit -->
@@ -273,34 +274,34 @@
                 data-action="submit-ingest"
                 :disabled="isSubmitting"
                 :class="[
-                  'w-full py-3 rounded-xl text-sm font-bold transition-all duration-200 shadow-md',
+                  'w-full h-11 rounded-md text-[14px] font-medium transition-colors',
                   isSubmitting
-                    ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                    : 'bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white hover:shadow-lg'
+                    ? 'bg-notion-hairline text-notion-muted-text cursor-not-allowed'
+                    : 'bg-notion-primary hover:bg-notion-primary-pressed text-notion-on-primary'
                 ]"
                 @click="submitForm"
-              >{{ isSubmitting ? '摄入中…' : '🚀 开始摄入' }}</button>
+              >{{ isSubmitting ? '摄入中…' : '开始摄入' }}</button>
             </div>
           </div>
         </div>
 
         <!-- Result state -->
         <div v-else-if="rightPanelState === 'result'" data-panel="result" class="h-full flex flex-col">
-          <div class="bg-gradient-to-r from-indigo-600 to-purple-600 px-6 py-4 flex-shrink-0 shadow-md">
-            <h2 class="text-lg font-bold text-white">摄入进行中</h2>
-            <p class="text-xs text-indigo-100 mt-0.5">内容正在处理，完成后将自动刷新</p>
+          <div class="bg-notion-canvas border-b border-notion-hairline px-8 py-5 flex-shrink-0">
+            <h2 class="text-[18px] font-semibold text-notion-ink">摄入进行中</h2>
+            <p class="text-[12px] text-notion-steel mt-0.5">内容正在处理，完成后将自动刷新</p>
           </div>
-          <div class="flex-1 flex items-center justify-center p-6">
-            <div class="bg-white rounded-2xl border border-gray-200 shadow-lg p-8 max-w-md w-full text-center">
-              <div class="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-amber-100 to-orange-100 rounded-2xl flex items-center justify-center shadow-md">
-                <span class="text-3xl animate-pulse">⏳</span>
+          <div class="flex-1 flex items-center justify-center px-8 py-6">
+            <div class="bg-notion-canvas rounded-lg border border-notion-hairline p-8 max-w-md w-full text-center">
+              <div class="w-12 h-12 mx-auto mb-4 rounded-md bg-notion-tint-yellow flex items-center justify-center">
+                <span class="text-lg text-notion-brand-orange-deep animate-pulse">⏳</span>
               </div>
-              <h3 class="text-base font-bold text-gray-800 mb-1">{{ submittedTitle }}</h3>
-              <p class="text-sm text-gray-500 mb-6">正在摄入到「{{ selectedDomain }}」领域</p>
-              <div class="w-full bg-gray-100 rounded-full h-2 overflow-hidden">
-                <div class="h-2 bg-gradient-to-r from-blue-400 to-purple-500 rounded-full animate-pulse" style="width: 60%"></div>
+              <h3 class="text-[15px] font-semibold text-notion-ink mb-1">{{ submittedTitle }}</h3>
+              <p class="text-[13px] text-notion-steel mb-5">正在摄入到「{{ selectedDomain }}」领域</p>
+              <div class="w-full bg-notion-surface rounded-full h-1.5 overflow-hidden">
+                <div class="h-1.5 bg-notion-primary rounded-full animate-pulse" style="width: 60%"></div>
               </div>
-              <button class="mt-6 text-xs text-gray-400 hover:text-indigo-600 transition-colors" @click="rightPanelState = 'domain'">
+              <button class="mt-5 text-[12px] text-notion-steel hover:text-notion-ink transition-colors" @click="rightPanelState = 'domain'">
                 返回领域列表
               </button>
             </div>
@@ -309,26 +310,25 @@
 
         <!-- Content viewer state -->
         <div v-else-if="rightPanelState === 'content'" data-panel="content" class="h-full flex flex-col">
-          <div class="bg-gradient-to-r from-indigo-600 to-purple-600 px-6 py-4 flex-shrink-0 shadow-md">
+          <div class="bg-notion-canvas border-b border-notion-hairline px-8 py-5 flex-shrink-0">
             <div class="flex items-center gap-3">
-              <button class="text-indigo-200 hover:text-white transition-colors text-sm" @click="rightPanelState = 'domain'">← 返回</button>
-              <span class="text-indigo-300">|</span>
-              <h2 class="text-base font-bold text-white truncate">{{ viewingTitle }}</h2>
+              <button class="text-[13px] text-notion-steel hover:text-notion-ink transition-colors" @click="rightPanelState = 'domain'">← 返回</button>
+              <span class="text-notion-hairline-strong">|</span>
+              <h2 class="text-[16px] font-semibold text-notion-ink truncate">{{ viewingTitle }}</h2>
             </div>
           </div>
-          <div class="flex-1 overflow-y-auto p-6">
-            <div v-if="!viewingFilename" class="flex flex-col items-center justify-center h-48 gap-3 text-gray-500">
-              <span class="text-4xl">📝</span>
-              <p class="text-sm">无原始文件可预览</p>
-              <p class="text-xs text-gray-400">内容已分块存入知识库，可在问答中使用</p>
+          <div class="flex-1 overflow-y-auto px-8 py-6">
+            <div v-if="!viewingFilename" class="flex flex-col items-center justify-center h-48 text-notion-stone">
+              <p class="text-[14px]">无原始文件可预览</p>
+              <p class="text-[12px] text-notion-muted-text mt-1">内容已分块存入知识库，可在问答中使用</p>
             </div>
-            <div v-else-if="contentLoading" class="flex items-center justify-center h-48 text-gray-400">
-              <span class="animate-spin text-2xl mr-2">⏳</span> 加载中…
+            <div v-else-if="contentLoading" class="flex items-center justify-center h-48 text-notion-stone text-[14px]">
+              加载中…
             </div>
-            <div v-else-if="contentError" class="flex items-center gap-2 px-4 py-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-600">
-              ⚠️ 内容加载失败，文件可能已被删除
+            <div v-else-if="contentError" class="px-4 py-3 bg-notion-tint-rose border border-notion-hairline rounded-md text-[13px] text-notion-error">
+              内容加载失败，文件可能已被删除
             </div>
-            <div v-else class="bg-white rounded-xl border border-gray-200 shadow-sm p-6 prose max-w-none" v-html="renderedContent" />
+            <div v-else class="bg-notion-canvas rounded-lg border border-notion-hairline p-6 prose max-w-none" v-html="renderedContent" />
           </div>
         </div>
 
