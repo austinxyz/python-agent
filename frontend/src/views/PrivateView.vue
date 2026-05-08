@@ -1,45 +1,55 @@
 <template>
-  <div class="h-screen flex flex-col bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50">
+  <!--
+    PrivateView — redesigned 2026-05-08 against docs/design/notion.md.
+    Tokens: notion-* in tailwind.config.cjs. Light canvas, brand-navy hero band,
+    single primary purple CTA, pastel tints for template differentiation.
+  -->
+  <div class="h-screen flex flex-col bg-notion-surface-soft text-notion-ink">
 
-    <!-- Page Header -->
-    <div class="bg-gradient-to-r from-blue-600 to-purple-600 shadow-lg px-6 py-4 flex-shrink-0">
+    <!-- Page Header — brand-navy hero band, replaces V1 blue→purple gradient -->
+    <div class="bg-notion-brand-navy text-notion-on-dark px-6 py-5 flex-shrink-0">
       <div class="flex items-center gap-3">
-        <Lock class="w-6 h-6 text-white" />
+        <div class="w-9 h-9 rounded-md bg-white/10 flex items-center justify-center">
+          <Lock class="w-5 h-5" />
+        </div>
         <div>
-          <h1 class="text-2xl font-bold text-white">私有数据</h1>
-          <p class="text-xs text-blue-100 mt-1">条目按目录组织，模板条目参与 AI 检索；笔记不参与</p>
+          <h1 class="text-xl font-semibold tracking-tight leading-tight">私有数据</h1>
+          <p class="text-[13px] text-notion-on-dark-muted mt-0.5">条目按目录组织，模板条目参与 AI 检索；笔记不参与</p>
         </div>
       </div>
     </div>
 
-    <div v-if="store.error" class="bg-red-50 border-b border-red-200 px-6 py-2 text-sm text-red-600 flex-shrink-0">
-      ⚠️ {{ store.error }}
+    <div v-if="store.error" class="bg-notion-tint-rose border-b border-notion-hairline px-6 py-2 text-[13px] text-notion-error flex-shrink-0">
+      {{ store.error }}
     </div>
 
     <!-- Two-column layout -->
     <div class="flex-1 flex overflow-hidden">
 
       <!-- LEFT SIDEBAR -->
-      <div data-sidebar class="w-72 flex-shrink-0 bg-white border-r border-gray-200 flex flex-col shadow-lg">
-        <div class="px-4 py-3 border-b border-gray-200 bg-gradient-to-r from-indigo-500 to-purple-500 flex items-center justify-between">
-          <h2 class="text-sm font-semibold text-white">📁 目录</h2>
-          <span class="text-[10px] text-indigo-100">{{ totalCount }} 项</span>
+      <div data-sidebar class="w-72 flex-shrink-0 bg-notion-canvas border-r border-notion-hairline flex flex-col">
+        <!-- Section header -->
+        <div class="px-4 py-3 border-b border-notion-hairline-soft flex items-center justify-between">
+          <h2 class="text-[11px] font-semibold uppercase tracking-[0.08em] text-notion-steel">目录</h2>
+          <span class="text-[11px] text-notion-stone">{{ totalCount }} 项</span>
         </div>
 
-        <div class="flex-shrink-0 grid grid-cols-2 gap-2 p-3 border-b border-gray-200 bg-gray-50">
+        <!-- New buttons — primary purple + secondary dark -->
+        <div class="flex-shrink-0 grid grid-cols-2 gap-2 p-3 border-b border-notion-hairline-soft">
           <button
             data-new-entry-btn
-            class="px-3 py-2 bg-gradient-to-r from-green-400 to-emerald-500 hover:from-green-500 hover:to-emerald-600 text-white text-xs font-bold rounded-lg shadow-sm transition-all"
+            class="px-3 h-9 bg-notion-primary hover:bg-notion-primary-pressed text-notion-on-primary text-[13px] font-medium rounded-md transition-colors"
             @click="openNewEntry"
           >+ 新建条目</button>
           <button
             data-new-note-btn
-            class="px-3 py-2 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white text-xs font-bold rounded-lg shadow-sm transition-all"
+            class="px-3 h-9 bg-notion-ink-deep hover:bg-notion-charcoal text-notion-on-dark text-[13px] font-medium rounded-md transition-colors"
             @click="openNewNote"
           >+ 新建笔记</button>
         </div>
 
-        <div class="flex-1 overflow-y-auto py-2">
+        <!-- Directory tree -->
+        <div class="flex-1 overflow-y-auto py-2 px-1">
           <DirectoryTreeNode
             :tree="store.combinedTree"
             :depth="0"
@@ -52,64 +62,65 @@
       </div>
 
       <!-- RIGHT PANEL -->
-      <div class="flex-1 overflow-y-auto">
+      <div class="flex-1 overflow-y-auto bg-notion-surface-soft">
 
         <!-- Welcome -->
-        <div v-if="rightState === 'welcome'" data-panel="welcome" class="h-full flex items-center justify-center">
+        <div v-if="rightState === 'welcome'" data-panel="welcome" class="h-full flex items-center justify-center px-8">
           <div class="text-center max-w-md">
-            <div class="w-20 h-20 mx-auto mb-6 bg-gradient-to-br from-blue-100 to-purple-100 rounded-2xl flex items-center justify-center shadow-lg">
-              <Lock class="w-10 h-10 text-indigo-500" />
+            <div class="w-14 h-14 mx-auto mb-5 rounded-md bg-notion-tint-lavender flex items-center justify-center">
+              <Lock class="w-7 h-7 text-notion-brand-purple-800" />
             </div>
-            <h2 class="text-xl font-bold text-gray-800 mb-2">私有数据管理</h2>
-            <p class="text-sm text-gray-500 leading-relaxed">从左侧目录选择已有条目查看，或点上方按钮新建模板条目和笔记。<br><span class="text-amber-600 text-xs">提示：模板条目会被 AI 检索，笔记不会。</span></p>
+            <h2 class="text-lg font-semibold text-notion-ink mb-2">私有数据管理</h2>
+            <p class="text-[14px] text-notion-slate leading-relaxed">从左侧目录选择已有条目查看，或点上方按钮新建模板条目和笔记。<br><span class="text-[13px] text-notion-steel">提示：模板条目会被 AI 检索，笔记不会。</span></p>
           </div>
         </div>
 
         <!-- Item view -->
         <div v-else-if="rightState === 'item-view' && selectedItem" data-panel="item-view" class="h-full flex flex-col">
-          <div class="bg-gradient-to-r from-indigo-600 to-purple-600 px-6 py-4 flex-shrink-0 shadow-md">
-            <div class="flex items-center justify-between gap-3">
+          <div class="bg-notion-canvas border-b border-notion-hairline px-8 py-5 flex-shrink-0">
+            <div class="flex items-start justify-between gap-4">
               <div class="flex-1 min-w-0">
-                <div class="flex items-center gap-2 text-xs text-indigo-100 mb-1">
-                  <span class="px-2 py-0.5 rounded-full bg-white/20 font-semibold">{{ selectedItem.kind === 'entry' ? templateLabel(selectedItem.template_type) : '笔记' }}</span>
+                <div class="flex items-center gap-2 text-[12px] text-notion-steel mb-1.5">
+                  <span :class="kindBadgeClass(selectedItem)">{{ selectedItem.kind === 'entry' ? templateLabel(selectedItem.template_type) : '笔记' }}</span>
+                  <span class="text-notion-stone">·</span>
                   <span>{{ selectedItem.directory || '/' }}</span>
-                  <span>·</span>
+                  <span class="text-notion-stone">·</span>
                   <span>更新 {{ formatDate(selectedItem.updated_at) }}</span>
                 </div>
-                <h2 class="text-lg font-bold text-white truncate">{{ selectedItem.title }}</h2>
+                <h2 class="text-[22px] font-semibold tracking-tight text-notion-ink truncate">{{ selectedItem.title }}</h2>
               </div>
               <div class="flex gap-2 flex-shrink-0">
                 <button
                   data-edit-item-btn
-                  class="px-3 py-1.5 bg-white/20 hover:bg-white/30 text-white text-xs font-semibold rounded-lg transition-all"
+                  class="h-8 px-3 bg-transparent hover:bg-notion-surface text-notion-ink text-[13px] font-medium rounded-md border border-notion-hairline-strong transition-colors"
                   @click="startEditing"
                 >编辑</button>
                 <button
                   data-delete-item-btn
-                  class="px-3 py-1.5 bg-red-400/30 hover:bg-red-400/50 text-white text-xs font-semibold rounded-lg transition-all"
+                  class="h-8 px-3 bg-transparent hover:bg-notion-tint-rose text-notion-error text-[13px] font-medium rounded-md border border-notion-hairline-strong transition-colors"
                   @click="deleteSelected"
                 >删除</button>
               </div>
             </div>
           </div>
 
-          <div class="flex-1 overflow-y-auto p-6">
+          <div class="flex-1 overflow-y-auto px-8 py-6">
             <div class="max-w-3xl">
               <!-- Entry: render template fields -->
-              <div v-if="selectedItem.kind === 'entry'" class="bg-white rounded-xl border border-gray-200 shadow-sm p-6 space-y-4">
+              <div v-if="selectedItem.kind === 'entry'" class="bg-notion-canvas rounded-lg border border-notion-hairline p-6 space-y-5">
                 <div
                   v-for="field in templateFields(selectedItem.template_type)"
                   :key="field.key"
-                  class="flex flex-col gap-1"
+                  class="flex flex-col gap-1.5 pb-4 last:pb-0 last:border-0 border-b border-notion-hairline-soft"
                 >
-                  <span class="text-xs font-semibold text-gray-500 uppercase tracking-wider">{{ field.label }}</span>
-                  <span class="text-sm text-gray-800 whitespace-pre-line">{{ fieldValue(selectedItem, field.key) || '—' }}</span>
+                  <span class="text-[11px] font-semibold uppercase tracking-[0.08em] text-notion-steel">{{ field.label }}</span>
+                  <span class="text-[14px] text-notion-ink whitespace-pre-line leading-relaxed">{{ fieldValue(selectedItem, field.key) || '—' }}</span>
                 </div>
               </div>
 
-              <!-- Note: render markdown content as preformatted text -->
-              <div v-else class="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
-                <div class="text-sm text-gray-700 whitespace-pre-line leading-relaxed">{{ selectedItem.content || '（空）' }}</div>
+              <!-- Note: render markdown content -->
+              <div v-else class="bg-notion-canvas rounded-lg border border-notion-hairline p-6">
+                <div class="text-[14px] text-notion-charcoal whitespace-pre-line leading-relaxed">{{ selectedItem.content || '（空）' }}</div>
               </div>
             </div>
           </div>
@@ -117,31 +128,31 @@
 
         <!-- Item edit -->
         <div v-else-if="rightState === 'item-edit' && selectedItem" data-panel="item-edit" class="h-full flex flex-col">
-          <div class="bg-gradient-to-r from-indigo-600 to-purple-600 px-6 py-4 flex-shrink-0 shadow-md">
+          <div class="bg-notion-canvas border-b border-notion-hairline px-8 py-5 flex-shrink-0">
             <div class="flex items-center gap-3">
-              <button class="text-indigo-200 hover:text-white text-sm" @click="cancelEditing">← 返回</button>
-              <span class="text-indigo-300">|</span>
-              <h2 class="text-lg font-bold text-white">编辑{{ selectedItem.kind === 'entry' ? '条目' : '笔记' }}</h2>
+              <button class="text-[13px] text-notion-steel hover:text-notion-ink transition-colors" @click="cancelEditing">← 返回</button>
+              <span class="text-notion-hairline-strong">|</span>
+              <h2 class="text-[18px] font-semibold text-notion-ink">编辑{{ selectedItem.kind === 'entry' ? '条目' : '笔记' }}</h2>
             </div>
           </div>
 
-          <div class="flex-1 overflow-y-auto p-6">
+          <div class="flex-1 overflow-y-auto px-8 py-6">
             <div class="max-w-2xl space-y-4">
-              <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-5 space-y-4">
+              <div class="bg-notion-canvas rounded-lg border border-notion-hairline p-6 space-y-4">
                 <div>
-                  <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">标题 <span class="text-red-400">*</span></label>
+                  <label class="block text-[11px] font-semibold uppercase tracking-[0.08em] text-notion-steel mb-1.5">标题 <span class="text-notion-error">*</span></label>
                   <input
                     v-model="editForm.title"
                     type="text"
-                    class="w-full px-3 py-2 rounded-lg border border-gray-200 bg-gray-50 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent"
+                    class="w-full h-11 px-3 bg-notion-canvas border border-notion-hairline-strong text-notion-ink text-[14px] rounded-md focus:outline-none focus:border-notion-primary focus:ring-1 focus:ring-notion-primary"
                   />
                 </div>
                 <div>
-                  <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">目录</label>
+                  <label class="block text-[11px] font-semibold uppercase tracking-[0.08em] text-notion-steel mb-1.5">目录</label>
                   <input
                     v-model="editForm.directory"
                     type="text"
-                    class="w-full px-3 py-2 rounded-lg border border-gray-200 bg-gray-50 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent"
+                    class="w-full h-11 px-3 bg-notion-canvas border border-notion-hairline-strong text-notion-ink text-[14px] rounded-md focus:outline-none focus:border-notion-primary focus:ring-1 focus:ring-notion-primary"
                   />
                 </div>
 
@@ -151,18 +162,18 @@
                     v-for="field in templateFields(selectedItem.template_type)"
                     :key="field.key"
                   >
-                    <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">{{ field.label }}</label>
+                    <label class="block text-[11px] font-semibold uppercase tracking-[0.08em] text-notion-steel mb-1.5">{{ field.label }}</label>
                     <textarea
                       v-if="field.type === 'textarea'"
                       v-model="editForm.content[field.key]"
                       rows="3"
-                      class="w-full px-3 py-2 rounded-lg border border-gray-200 bg-gray-50 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent resize-y"
+                      class="w-full px-3 py-2 bg-notion-canvas border border-notion-hairline-strong text-notion-ink text-[14px] rounded-md focus:outline-none focus:border-notion-primary focus:ring-1 focus:ring-notion-primary resize-y"
                     />
                     <input
                       v-else
                       v-model="editForm.content[field.key]"
                       :type="field.type === 'number' ? 'number' : 'text'"
-                      class="w-full px-3 py-2 rounded-lg border border-gray-200 bg-gray-50 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent"
+                      class="w-full h-11 px-3 bg-notion-canvas border border-notion-hairline-strong text-notion-ink text-[14px] rounded-md focus:outline-none focus:border-notion-primary focus:ring-1 focus:ring-notion-primary"
                     />
                   </div>
                 </template>
@@ -170,16 +181,16 @@
                 <!-- Note content -->
                 <template v-else>
                   <div>
-                    <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">内容</label>
+                    <label class="block text-[11px] font-semibold uppercase tracking-[0.08em] text-notion-steel mb-1.5">内容</label>
                     <textarea
                       v-model="editForm.noteContent"
                       rows="14"
-                      class="w-full px-3 py-2 rounded-lg border border-gray-200 bg-gray-50 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400 focus:border-transparent resize-y"
+                      class="w-full px-3 py-2 bg-notion-canvas border border-notion-hairline-strong text-notion-ink text-[14px] rounded-md focus:outline-none focus:border-notion-primary focus:ring-1 focus:ring-notion-primary resize-y"
                     />
                   </div>
                 </template>
 
-                <div v-if="formError" class="px-3 py-2 bg-red-50 border border-red-200 rounded-lg text-xs text-red-600">
+                <div v-if="formError" class="px-3 py-2 bg-notion-tint-rose border border-notion-hairline rounded-md text-[13px] text-notion-error">
                   {{ formError }}
                 </div>
 
@@ -187,15 +198,15 @@
                   <button
                     :disabled="submitting"
                     :class="[
-                      'flex-1 py-2.5 rounded-lg text-sm font-bold transition-all shadow-md',
+                      'h-10 px-5 rounded-md text-[14px] font-medium transition-colors',
                       submitting
-                        ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                        : 'bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white hover:shadow-lg',
+                        ? 'bg-notion-hairline text-notion-muted-text cursor-not-allowed'
+                        : 'bg-notion-primary hover:bg-notion-primary-pressed text-notion-on-primary',
                     ]"
                     @click="saveEdit"
-                  >{{ submitting ? '保存中…' : '💾 保存' }}</button>
+                  >{{ submitting ? '保存中…' : '保存' }}</button>
                   <button
-                    class="px-4 py-2.5 bg-gray-100 text-gray-600 text-sm font-medium rounded-lg hover:bg-gray-200 transition-all"
+                    class="h-10 px-5 bg-transparent hover:bg-notion-surface text-notion-ink text-[14px] font-medium rounded-md border border-notion-hairline-strong transition-colors"
                     @click="cancelEditing"
                   >取消</button>
                 </div>
@@ -206,56 +217,60 @@
 
         <!-- New entry -->
         <div v-else-if="rightState === 'new-entry'" data-panel="new-entry" class="h-full flex flex-col">
-          <div class="bg-gradient-to-r from-indigo-600 to-purple-600 px-6 py-4 flex-shrink-0 shadow-md">
+          <div class="bg-notion-canvas border-b border-notion-hairline px-8 py-5 flex-shrink-0">
             <div class="flex items-center gap-3">
-              <button class="text-indigo-200 hover:text-white text-sm" @click="goWelcome">← 返回</button>
-              <span class="text-indigo-300">|</span>
-              <h2 class="text-lg font-bold text-white">新建条目</h2>
+              <button class="text-[13px] text-notion-steel hover:text-notion-ink transition-colors" @click="goWelcome">← 返回</button>
+              <span class="text-notion-hairline-strong">|</span>
+              <h2 class="text-[18px] font-semibold text-notion-ink">新建条目</h2>
             </div>
           </div>
 
-          <div class="flex-1 overflow-y-auto p-6">
+          <div class="flex-1 overflow-y-auto px-8 py-6">
             <div class="max-w-2xl space-y-4">
-              <!-- Template picker -->
-              <div v-if="!entryForm.template" class="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
-                <p class="text-sm font-semibold text-gray-700 mb-3">选择模板</p>
-                <div class="grid grid-cols-2 gap-2">
+              <!-- Template picker — pastel tinted cards -->
+              <div v-if="!entryForm.template" class="bg-notion-canvas rounded-lg border border-notion-hairline p-6">
+                <p class="text-[14px] font-medium text-notion-ink mb-4">选择模板</p>
+                <div class="grid grid-cols-2 gap-3">
                   <button
-                    v-for="tpl in store.templates"
+                    v-for="(tpl, idx) in store.templates"
                     :key="tpl.type"
                     :data-template-option="tpl.type"
-                    class="px-4 py-3 text-sm font-medium rounded-lg border-2 border-gray-200 bg-white hover:border-indigo-400 hover:bg-indigo-50 transition-all text-left"
+                    :class="[
+                      'px-4 py-4 text-left rounded-lg transition-colors',
+                      templateTintClass(idx),
+                      'hover:ring-2 hover:ring-notion-primary',
+                    ]"
                     @click="pickTemplate(tpl)"
                   >
-                    <span class="text-gray-700">{{ tpl.label }}</span>
-                    <span class="block text-[10px] text-gray-400 mt-0.5">默认目录：{{ tpl.default_directory }}</span>
+                    <span class="block text-[14px] font-semibold text-notion-charcoal">{{ tpl.label }}</span>
+                    <span class="block text-[12px] text-notion-slate mt-1">默认目录：{{ tpl.default_directory }}</span>
                   </button>
                 </div>
               </div>
 
               <!-- Form -->
-              <div v-else class="bg-white rounded-xl border border-gray-200 shadow-sm p-5 space-y-4">
+              <div v-else class="bg-notion-canvas rounded-lg border border-notion-hairline p-6 space-y-4">
                 <div class="flex items-center justify-between">
-                  <span class="px-3 py-1 text-xs font-semibold rounded-full bg-gradient-to-r from-blue-500 to-indigo-500 text-white">{{ entryForm.template.label }}</span>
-                  <button class="text-xs text-gray-400 hover:text-gray-600" @click="entryForm.template = null">换模板</button>
+                  <span class="px-2.5 py-1 text-[12px] font-semibold rounded-md bg-notion-tint-lavender text-notion-brand-purple-800">{{ entryForm.template.label }}</span>
+                  <button class="text-[13px] text-notion-steel hover:text-notion-ink transition-colors" @click="entryForm.template = null">换模板</button>
                 </div>
                 <div>
-                  <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">标题 <span class="text-red-400">*</span></label>
+                  <label class="block text-[11px] font-semibold uppercase tracking-[0.08em] text-notion-steel mb-1.5">标题 <span class="text-notion-error">*</span></label>
                   <input
                     data-entry-title
                     v-model="entryForm.title"
                     type="text"
                     placeholder="如：2025 税务情况"
-                    class="w-full px-3 py-2 rounded-lg border border-gray-200 bg-gray-50 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent"
+                    class="w-full h-11 px-3 bg-notion-canvas border border-notion-hairline-strong text-notion-ink text-[14px] rounded-md placeholder:text-notion-stone focus:outline-none focus:border-notion-primary focus:ring-1 focus:ring-notion-primary"
                   />
                 </div>
                 <div>
-                  <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">目录</label>
+                  <label class="block text-[11px] font-semibold uppercase tracking-[0.08em] text-notion-steel mb-1.5">目录</label>
                   <input
                     data-entry-directory
                     v-model="entryForm.directory"
                     type="text"
-                    class="w-full px-3 py-2 rounded-lg border border-gray-200 bg-gray-50 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent"
+                    class="w-full h-11 px-3 bg-notion-canvas border border-notion-hairline-strong text-notion-ink text-[14px] rounded-md focus:outline-none focus:border-notion-primary focus:ring-1 focus:ring-notion-primary"
                   />
                 </div>
                 <div
@@ -263,24 +278,24 @@
                   :key="field.key"
                   data-entry-field
                 >
-                  <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">{{ field.label }}</label>
+                  <label class="block text-[11px] font-semibold uppercase tracking-[0.08em] text-notion-steel mb-1.5">{{ field.label }}</label>
                   <textarea
                     v-if="field.type === 'textarea'"
                     v-model="entryForm.content[field.key]"
                     :placeholder="field.placeholder || ''"
                     rows="3"
-                    class="w-full px-3 py-2 rounded-lg border border-gray-200 bg-gray-50 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent resize-y"
+                    class="w-full px-3 py-2 bg-notion-canvas border border-notion-hairline-strong text-notion-ink text-[14px] rounded-md placeholder:text-notion-stone focus:outline-none focus:border-notion-primary focus:ring-1 focus:ring-notion-primary resize-y"
                   />
                   <input
                     v-else
                     v-model="entryForm.content[field.key]"
                     :type="field.type === 'number' ? 'number' : 'text'"
                     :placeholder="field.placeholder || ''"
-                    class="w-full px-3 py-2 rounded-lg border border-gray-200 bg-gray-50 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent"
+                    class="w-full h-11 px-3 bg-notion-canvas border border-notion-hairline-strong text-notion-ink text-[14px] rounded-md placeholder:text-notion-stone focus:outline-none focus:border-notion-primary focus:ring-1 focus:ring-notion-primary"
                   />
                 </div>
 
-                <div v-if="formError" class="px-3 py-2 bg-red-50 border border-red-200 rounded-lg text-xs text-red-600">
+                <div v-if="formError" class="px-3 py-2 bg-notion-tint-rose border border-notion-hairline rounded-md text-[13px] text-notion-error">
                   {{ formError }}
                 </div>
 
@@ -288,13 +303,13 @@
                   data-save-entry-btn
                   :disabled="submitting"
                   :class="[
-                    'w-full py-2.5 rounded-lg text-sm font-bold transition-all shadow-md',
+                    'w-full h-11 rounded-md text-[14px] font-medium transition-colors',
                     submitting
-                      ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                      : 'bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white hover:shadow-lg',
+                      ? 'bg-notion-hairline text-notion-muted-text cursor-not-allowed'
+                      : 'bg-notion-primary hover:bg-notion-primary-pressed text-notion-on-primary',
                   ]"
                   @click="saveNewEntry"
-                >{{ submitting ? '保存中…' : '💾 保存条目' }}</button>
+                >{{ submitting ? '保存中…' : '保存条目' }}</button>
               </div>
             </div>
           </div>
@@ -302,46 +317,46 @@
 
         <!-- New note -->
         <div v-else-if="rightState === 'new-note'" data-panel="new-note" class="h-full flex flex-col">
-          <div class="bg-gradient-to-r from-purple-600 to-pink-600 px-6 py-4 flex-shrink-0 shadow-md">
+          <div class="bg-notion-canvas border-b border-notion-hairline px-8 py-5 flex-shrink-0">
             <div class="flex items-center gap-3">
-              <button class="text-purple-200 hover:text-white text-sm" @click="goWelcome">← 返回</button>
-              <span class="text-purple-300">|</span>
-              <h2 class="text-lg font-bold text-white">新建笔记</h2>
+              <button class="text-[13px] text-notion-steel hover:text-notion-ink transition-colors" @click="goWelcome">← 返回</button>
+              <span class="text-notion-hairline-strong">|</span>
+              <h2 class="text-[18px] font-semibold text-notion-ink">新建笔记</h2>
             </div>
           </div>
-          <div class="flex-1 overflow-y-auto p-6">
+          <div class="flex-1 overflow-y-auto px-8 py-6">
             <div class="max-w-2xl">
-              <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-5 space-y-4">
+              <div class="bg-notion-canvas rounded-lg border border-notion-hairline p-6 space-y-4">
                 <div>
-                  <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">标题 <span class="text-red-400">*</span></label>
+                  <label class="block text-[11px] font-semibold uppercase tracking-[0.08em] text-notion-steel mb-1.5">标题 <span class="text-notion-error">*</span></label>
                   <input
                     data-note-title
                     v-model="noteForm.title"
                     type="text"
-                    class="w-full px-3 py-2 rounded-lg border border-gray-200 bg-gray-50 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400 focus:border-transparent"
+                    class="w-full h-11 px-3 bg-notion-canvas border border-notion-hairline-strong text-notion-ink text-[14px] rounded-md focus:outline-none focus:border-notion-primary focus:ring-1 focus:ring-notion-primary"
                   />
                 </div>
                 <div>
-                  <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">目录</label>
+                  <label class="block text-[11px] font-semibold uppercase tracking-[0.08em] text-notion-steel mb-1.5">目录</label>
                   <input
                     data-note-directory
                     v-model="noteForm.directory"
                     type="text"
                     placeholder="如：退休规划/Roth相关"
-                    class="w-full px-3 py-2 rounded-lg border border-gray-200 bg-gray-50 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400 focus:border-transparent"
+                    class="w-full h-11 px-3 bg-notion-canvas border border-notion-hairline-strong text-notion-ink text-[14px] rounded-md placeholder:text-notion-stone focus:outline-none focus:border-notion-primary focus:ring-1 focus:ring-notion-primary"
                   />
                 </div>
                 <div>
-                  <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">内容</label>
+                  <label class="block text-[11px] font-semibold uppercase tracking-[0.08em] text-notion-steel mb-1.5">内容</label>
                   <textarea
                     data-note-content
                     v-model="noteForm.content"
                     rows="14"
-                    class="w-full px-3 py-2 rounded-lg border border-gray-200 bg-gray-50 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400 focus:border-transparent resize-y"
+                    class="w-full px-3 py-2 bg-notion-canvas border border-notion-hairline-strong text-notion-ink text-[14px] rounded-md focus:outline-none focus:border-notion-primary focus:ring-1 focus:ring-notion-primary resize-y"
                   />
                 </div>
 
-                <div v-if="formError" class="px-3 py-2 bg-red-50 border border-red-200 rounded-lg text-xs text-red-600">
+                <div v-if="formError" class="px-3 py-2 bg-notion-tint-rose border border-notion-hairline rounded-md text-[13px] text-notion-error">
                   {{ formError }}
                 </div>
 
@@ -349,13 +364,13 @@
                   data-save-note-btn
                   :disabled="submitting"
                   :class="[
-                    'w-full py-2.5 rounded-lg text-sm font-bold transition-all shadow-md',
+                    'w-full h-11 rounded-md text-[14px] font-medium transition-colors',
                     submitting
-                      ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                      : 'bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white hover:shadow-lg',
+                      ? 'bg-notion-hairline text-notion-muted-text cursor-not-allowed'
+                      : 'bg-notion-primary hover:bg-notion-primary-pressed text-notion-on-primary',
                   ]"
                   @click="saveNewNote"
-                >{{ submitting ? '保存中…' : '💾 保存笔记' }}</button>
+                >{{ submitting ? '保存中…' : '保存笔记' }}</button>
               </div>
             </div>
           </div>
@@ -441,6 +456,26 @@ function formatDate(iso) {
   return iso.slice(0, 10)
 }
 
+// Cycle Notion's pastel tints across the 6 templates so each gets a distinct
+// but coordinated tile color in the picker.
+const TEMPLATE_TINTS = [
+  'bg-notion-tint-lavender',
+  'bg-notion-tint-mint',
+  'bg-notion-tint-sky',
+  'bg-notion-tint-peach',
+  'bg-notion-tint-cream',
+  'bg-notion-tint-yellow',
+]
+function templateTintClass(idx) {
+  return TEMPLATE_TINTS[idx % TEMPLATE_TINTS.length]
+}
+
+function kindBadgeClass(item) {
+  return item.kind === 'entry'
+    ? 'px-2 py-0.5 rounded-md bg-notion-tint-lavender text-notion-brand-purple-800 font-semibold text-[11px]'
+    : 'px-2 py-0.5 rounded-md bg-notion-tint-mint text-notion-brand-green font-semibold text-[11px]'
+}
+
 function toggleDir(path) {
   expandedDirs[path] = !expandedDirs[path]
 }
@@ -476,7 +511,6 @@ function goWelcome() {
   formError.value = ''
 }
 
-// ===== New entry =====
 function confirmDiscardIfDirty() {
   if (rightState.value === 'new-entry' && isNewEntryDirty()) {
     return window.confirm('放弃当前正在编辑的新条目？')
@@ -530,7 +564,6 @@ async function saveNewEntry() {
   }
 }
 
-// ===== New note =====
 function openNewNote() {
   if (!confirmDiscardIfDirty()) return
   noteForm.title = ''
@@ -566,7 +599,6 @@ async function saveNewNote() {
   }
 }
 
-// ===== Edit existing =====
 function startEditing() {
   if (!selectedItem.value) return
   editForm.title = selectedItem.value.title
@@ -635,7 +667,7 @@ async function deleteSelected() {
   }
 }
 
-// ===== Recursive directory tree node =====
+// ===== Recursive directory tree node — Notion-restyled =====
 const DirectoryTreeNode = {
   name: 'DirectoryTreeNode',
   props: {
@@ -650,7 +682,6 @@ const DirectoryTreeNode = {
     return () => {
       const children = []
 
-      // Direct items (under root or under this directory)
       const directItems = Array.isArray(props.tree._items) ? props.tree._items : []
       for (const item of directItems) {
         const isSelected = props.selectedId === item.id
@@ -661,20 +692,22 @@ const DirectoryTreeNode = {
             {
               'data-item': '',
               class: [
-                'cursor-pointer text-sm py-1.5 pr-2 rounded-md transition-all truncate',
+                'cursor-pointer text-[13px] py-1.5 pr-2 rounded-md transition-colors truncate flex items-center gap-1.5',
                 isSelected
-                  ? 'bg-gradient-to-r from-blue-50 to-purple-50 text-indigo-700 font-semibold border-l-2 border-l-indigo-500'
-                  : 'text-gray-700 hover:bg-gray-50',
+                  ? 'bg-notion-surface text-notion-ink font-medium border-l-2 border-l-notion-primary'
+                  : 'text-notion-charcoal hover:bg-notion-surface',
               ],
               style: { paddingLeft: `${props.depth * 14 + 12}px` },
               onClick: () => emit('select', item.id),
             },
-            [`${icon} `, item.title]
+            [
+              h('span', { class: 'opacity-70 text-[12px]' }, icon),
+              h('span', { class: 'truncate' }, item.title),
+            ]
           )
         )
       }
 
-      // Subdirectories
       const subdirs = Object.keys(props.tree)
         .filter(k => k !== '_items')
         .sort((a, b) => a.localeCompare(b, 'zh-Hans-CN'))
@@ -692,36 +725,20 @@ const DirectoryTreeNode = {
                 'div',
                 {
                   class: [
-                    'cursor-pointer text-sm font-semibold py-1.5 pr-2 hover:bg-gray-50 rounded-md flex items-center gap-2 transition-all',
+                    'cursor-pointer text-[13px] font-medium py-1.5 pr-2 rounded-md flex items-center gap-1.5 transition-colors hover:bg-notion-surface',
                   ],
                   style: { paddingLeft: `${props.depth * 14 + 8}px` },
                   onClick: () => emit('toggle', path),
                 },
                 [
-                  h('span', { class: 'text-gray-600 flex-shrink-0' }, '📁'),
                   h(
                     'span',
-                    {
-                      'data-directory-name': '',
-                      class: 'flex-1 text-gray-700 truncate',
-                    },
-                    name
-                  ),
-                  itemCount > 0
-                    ? h(
-                        'span',
-                        { class: 'flex-shrink-0 text-[10px] font-bold text-indigo-500 bg-indigo-50 px-1.5 py-0.5 rounded-full' },
-                        String(itemCount)
-                      )
-                    : null,
-                  h(
-                    'span',
-                    { class: 'flex-shrink-0 text-gray-300 hover:text-indigo-500 transition-colors p-0.5' },
+                    { class: 'flex-shrink-0 text-notion-stone hover:text-notion-steel p-0.5' },
                     [
                       h(
                         'svg',
                         {
-                          class: ['w-3.5 h-3.5 transition-transform duration-200', isExpanded ? 'rotate-90' : ''],
+                          class: ['w-3 h-3 transition-transform duration-200', isExpanded ? 'rotate-90' : ''],
                           viewBox: '0 0 24 24',
                           fill: 'none',
                           stroke: 'currentColor',
@@ -731,6 +748,22 @@ const DirectoryTreeNode = {
                       ),
                     ]
                   ),
+                  h('span', { class: 'text-notion-stone' }, '📁'),
+                  h(
+                    'span',
+                    {
+                      'data-directory-name': '',
+                      class: 'flex-1 text-notion-charcoal truncate',
+                    },
+                    name
+                  ),
+                  itemCount > 0
+                    ? h(
+                        'span',
+                        { class: 'flex-shrink-0 text-[11px] font-semibold text-notion-steel bg-notion-surface border border-notion-hairline rounded-full px-1.5 py-0.5' },
+                        String(itemCount)
+                      )
+                    : null,
                 ]
               ),
               isExpanded

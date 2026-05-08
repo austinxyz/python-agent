@@ -1,4 +1,15 @@
-# Frontend UI Design Guide
+# Frontend UI Design Guide (LEGACY)
+
+> **⚠️ Superseded by `docs/design/notion.md`** as of 2026-05-08.
+>
+> This document captures the project's V1 visual language (blue→purple gradient
+> on a light canvas, emoji accents). It still describes what the existing
+> components actually look like, so it's useful as a reference for the migration
+> period.
+>
+> **Do not extend this guide.** New UI work follows `docs/design/notion.md`
+> (with `docs/design/linear.md` as backup if Notion gets rejected). See
+> `docs/design/README.md` for the rationale and migration path.
 
 ## Tech Foundation
 

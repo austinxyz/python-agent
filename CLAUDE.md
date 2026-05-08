@@ -68,7 +68,8 @@ FLASK_SECRET_KEY=...
 ## Design Documents
 
 - Architecture & requirements: `docs/superpowers/specs/2026-05-05-knowledge-agent-design.md`
-- Frontend UI design system: `docs/frontend-ui-guide.md`
+- **UI design system (authoritative)**: `docs/design/notion.md` — full DESIGN.md from VoltAgent/awesome-design-md. Light-first, navy hero band, single purple CTA, pastel feature cards. New components MUST cite tokens / patterns from this file rather than inventing them. Backup: `docs/design/linear.md` (dark-first, swap if Notion is rejected). See `docs/design/README.md` for the rationale and migration policy.
+- Frontend UI guide (LEGACY, V1 reference only): `docs/frontend-ui-guide.md` — describes what existing components currently look like. Do not extend.
 
 ## Known Pitfalls (past mistakes)
 
