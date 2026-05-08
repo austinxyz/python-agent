@@ -94,3 +94,9 @@ class QdrantService:
 
     def upsert_private(self, points: list[models.PointStruct]) -> None:
         self._client.upsert(collection_name=PRIVATE_COLLECTION, points=points)
+
+    def delete_private(self, point_ids: list[str]) -> None:
+        self._client.delete(
+            collection_name=PRIVATE_COLLECTION,
+            points_selector=models.PointIdsList(points=point_ids),
+        )
