@@ -138,9 +138,17 @@
               <div v-else class="flex flex-col items-start gap-2">
                 <div
                   data-assistant-msg
-                  class="max-w-[80%] bg-notion-canvas text-notion-ink border border-notion-hairline px-4 py-2.5 rounded-lg whitespace-pre-line text-[14px] leading-relaxed"
+                  class="max-w-[80%] bg-notion-canvas text-notion-ink border border-notion-hairline px-4 py-2.5 rounded-lg text-[14px] leading-relaxed"
                 >
-                  {{ msg.content || (store.streaming && idx === messages.length - 1 ? '思考中…' : '') }}
+                  <div
+                    v-if="msg.content"
+                    class="prose prose-sm max-w-none prose-headings:text-notion-ink prose-strong:text-notion-ink prose-a:text-notion-link-blue prose-code:text-notion-brand-purple-800 prose-code:bg-notion-tint-lavender prose-code:px-1 prose-code:rounded"
+                    v-html="renderMd(msg.content)"
+                  />
+                  <div
+                    v-else-if="store.streaming && idx === messages.length - 1"
+                    class="text-notion-stone italic"
+                  >思考中…</div>
                 </div>
                 <div v-if="msg.sources && msg.sources.length" class="flex flex-wrap gap-1.5 max-w-[80%]">
                   <router-link
@@ -272,8 +280,17 @@
 import { ref, reactive, computed, onMounted, nextTick } from 'vue'
 import { MessageSquare } from 'lucide-vue-next'
 import { useChatStore } from '../stores/chat.js'
+import { markdownToHtml } from '../composables/useFileContent.js'
 
 const store = useChatStore()
+
+// Reuse the same marked + DOMPurify pipeline that WikiView and PrivateView
+// use, so assistant answers render headings / lists / links / code blocks
+// instead of showing raw `## ` and `**bold**` literally.
+function renderMd(text) {
+  if (!text) return ''
+  return markdownToHtml(String(text))
+}
 
 const inputText = ref('')
 const model = ref('haiku')

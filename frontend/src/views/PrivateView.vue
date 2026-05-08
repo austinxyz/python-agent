@@ -106,7 +106,9 @@
 
           <div class="flex-1 overflow-y-auto px-8 py-6">
             <div class="max-w-3xl">
-              <!-- Entry: render template fields -->
+              <!-- Entry: render template fields. Each value is markdown-rendered;
+                   short text/numbers pass through the same pipeline (wrapped
+                   in <p>) so styling stays consistent. -->
               <div v-if="selectedItem.kind === 'entry'" class="bg-notion-canvas rounded-lg border border-notion-hairline p-6 space-y-5">
                 <div
                   v-for="field in templateFields(selectedItem.template_type)"
@@ -114,13 +116,23 @@
                   class="flex flex-col gap-1.5 pb-4 last:pb-0 last:border-0 border-b border-notion-hairline-soft"
                 >
                   <span class="text-[11px] font-semibold uppercase tracking-[0.08em] text-notion-steel">{{ field.label }}</span>
-                  <span class="text-[14px] text-notion-ink whitespace-pre-line leading-relaxed">{{ fieldValue(selectedItem, field.key) || '—' }}</span>
+                  <div
+                    v-if="fieldValue(selectedItem, field.key)"
+                    class="text-[14px] text-notion-ink leading-relaxed prose prose-sm max-w-none prose-headings:text-notion-ink prose-strong:text-notion-ink prose-a:text-notion-link-blue"
+                    v-html="renderMd(fieldValue(selectedItem, field.key))"
+                  />
+                  <span v-else class="text-[14px] text-notion-stone">—</span>
                 </div>
               </div>
 
-              <!-- Note: render markdown content -->
+              <!-- Note: markdown content rendered the same way -->
               <div v-else class="bg-notion-canvas rounded-lg border border-notion-hairline p-6">
-                <div class="text-[14px] text-notion-charcoal whitespace-pre-line leading-relaxed">{{ selectedItem.content || '（空）' }}</div>
+                <div
+                  v-if="selectedItem.content"
+                  class="text-[14px] text-notion-charcoal leading-relaxed prose prose-sm max-w-none prose-headings:text-notion-ink prose-strong:text-notion-ink prose-a:text-notion-link-blue"
+                  v-html="renderMd(selectedItem.content)"
+                />
+                <div v-else class="text-[14px] text-notion-stone">（空）</div>
               </div>
             </div>
           </div>
@@ -386,9 +398,18 @@ import { ref, reactive, computed, onMounted, watch, h } from 'vue'
 import { useRoute } from 'vue-router'
 import { Lock } from 'lucide-vue-next'
 import { usePrivateStore } from '../stores/private.js'
+import { markdownToHtml } from '../composables/useFileContent.js'
 
 const store = usePrivateStore()
 const route = useRoute()
+
+// Reused for both entry-field values and note bodies — the same marked +
+// DOMPurify pipeline that WikiView uses for ingested content. Empty / short
+// values pass through unchanged (marked wraps them in <p>).
+function renderMd(text) {
+  if (!text) return ''
+  return markdownToHtml(String(text))
+}
 
 const rightState = ref('welcome') // welcome | item-view | item-edit | new-entry | new-note
 const selectedItemId = ref(null)
