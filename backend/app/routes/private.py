@@ -7,6 +7,7 @@ from typing import Any
 from flask import Blueprint, jsonify, request
 from qdrant_client.http import models as qmodels
 
+from app.graphs.text_chunker import chunk_text
 from app.routes.private_templates import (
     PRIVATE_TEMPLATES,
     VALID_TEMPLATE_TYPES,
@@ -40,6 +41,44 @@ def _normalize_directory(value: Any) -> str:
     if not isinstance(value, str):
         raise ValueError("directory must be a string")
     return value.strip().strip("/")
+
+
+def _chunked_points_for(
+    entry_id: str,
+    template_type: str,
+    title: str,
+    directory: str,
+    text: str,
+    embedding: EmbeddingService,
+) -> list[qmodels.PointStruct]:
+    """Chunk the entry text and produce one Qdrant point per chunk.
+
+    All points share the same `source_file_id = entry_id` so search-side
+    deduplication (qa_agent._to_source) treats them as a single source.
+    Each point gets a fresh UUID `id` and its own `chunk_index`. This is
+    what unblocks long entries — V1 used to call `embed(text)` once and
+    1-shotted on inputs > 8192 OpenAI tokens.
+    """
+    chunks = chunk_text(text)
+    points: list[qmodels.PointStruct] = []
+    for chunk in chunks:
+        vector = embedding.embed(chunk["text"])
+        points.append(
+            qmodels.PointStruct(
+                id=str(uuid.uuid4()),
+                vector=vector,
+                payload={
+                    "user_id": _USER_ID,
+                    "template_type": template_type,
+                    "title": title,
+                    "directory": directory,
+                    "source_file_id": entry_id,
+                    "chunk_index": chunk["chunk_index"],
+                    "text": chunk["text"],
+                },
+            )
+        )
+    return points
 
 
 def _coerce_content_json(value: Any) -> dict[str, Any]:
@@ -108,12 +147,11 @@ def create_entry():
 
     entry_id = str(uuid.uuid4())
     text = derive_text_for_embedding(template_type, title, content_json)
-    vector = EmbeddingService().embed(text or title)
 
     # SQLite is the source of truth — write metadata first. If Qdrant
-    # upsert later fails, we end up with a row whose vector can be re-built
-    # by a re-index job, but we never end up with an orphaned vector that
-    # can't be reconciled.
+    # upsert later fails, we end up with a row whose vectors can be
+    # re-built by a re-index job, but we never end up with orphaned
+    # vectors that can't be reconciled.
     db = DatabaseService()
     with db.connection() as conn:
         conn.execute(
@@ -129,21 +167,15 @@ def create_entry():
             (entry_id, _USER_ID),
         ).fetchone()
 
-    QdrantService().upsert_private(
-        [
-            qmodels.PointStruct(
-                id=entry_id,
-                vector=vector,
-                payload={
-                    "user_id": _USER_ID,
-                    "template_type": template_type,
-                    "title": title,
-                    "directory": directory,
-                    "source_file_id": entry_id,
-                },
-            )
-        ]
+    points = _chunked_points_for(
+        entry_id=entry_id,
+        template_type=template_type,
+        title=title,
+        directory=directory,
+        text=text or title,
+        embedding=EmbeddingService(),
     )
+    QdrantService().upsert_private(points)
 
     return jsonify(_row_to_entry(row)), 201
 
@@ -199,24 +231,22 @@ def update_entry(entry_id: str):
             (entry_id, _USER_ID),
         ).fetchone()
 
-    # Refresh embedding only after SQLite commit succeeds.
+    # Refresh embedding only after SQLite commit succeeds. Chunked update
+    # = filter-delete the old chunks (whatever count) then upsert the new
+    # ones. The single-point legacy entries also match the filter (their
+    # payload.source_file_id == entry_id) so cleanup is uniform.
     text = derive_text_for_embedding(template_type, new_title, new_content)
-    vector = EmbeddingService().embed(text or new_title)
-    QdrantService().upsert_private(
-        [
-            qmodels.PointStruct(
-                id=entry_id,
-                vector=vector,
-                payload={
-                    "user_id": _USER_ID,
-                    "template_type": template_type,
-                    "title": new_title,
-                    "directory": new_directory,
-                    "source_file_id": entry_id,
-                },
-            )
-        ]
+    qdrant = QdrantService()
+    qdrant.delete_private_by_source_file_id(_USER_ID, entry_id)
+    points = _chunked_points_for(
+        entry_id=entry_id,
+        template_type=template_type,
+        title=new_title,
+        directory=new_directory,
+        text=text or new_title,
+        embedding=EmbeddingService(),
     )
+    qdrant.upsert_private(points)
 
     return jsonify(_row_to_entry(row)), 200
 
@@ -237,10 +267,11 @@ def delete_entry(entry_id: str):
             (entry_id, _USER_ID),
         )
 
-    # Drop the vector only after SQLite has committed. A failure here leaves
-    # an orphan vector that a re-index job can clean up; the metadata (the
-    # source of truth) is already gone.
-    QdrantService().delete_private([entry_id])
+    # Drop every chunk only after SQLite has committed. Filter-based
+    # delete cleans up both new chunked entries (multiple points sharing
+    # source_file_id) and legacy single-point entries (1 point whose
+    # payload.source_file_id == entry_id).
+    QdrantService().delete_private_by_source_file_id(_USER_ID, entry_id)
 
     return jsonify({"ok": True}), 200
 

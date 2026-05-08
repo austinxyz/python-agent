@@ -11,13 +11,12 @@ import httpx
 from langgraph.graph import END, StateGraph
 from qdrant_client.http.models import PointStruct
 
+from app.graphs.text_chunker import CHUNK_OVERLAP, CHUNK_SIZE, chunk_text
 from app.services.db_service import DatabaseService
 from app.services.embedding_service import EmbeddingService
 from app.services.file_service import FileService
 from app.services.qdrant_service import QdrantService
 
-CHUNK_SIZE = 2000
-CHUNK_OVERLAP = 200
 _SUPPORTED_SOURCES = {"file", "url", "text", "mcp"}
 
 
@@ -177,54 +176,8 @@ def clean_node(state: IngestState) -> dict:
 
 
 def chunk_node(state: IngestState) -> dict:
-    raw = state["raw_content"] or ""
-    if len(raw) <= CHUNK_SIZE:
-        return {"chunks": [{"text": raw, "chunk_index": 0}]}
-
-    paragraphs = raw.split("\n\n")
-    chunks: list[dict] = []
-    current_parts: list[str] = []
-    current_len = 0
-
-    prev_tail = ""
-    for para in paragraphs:
-        para_parts = _split_paragraph(para)
-        for part in para_parts:
-            part_len = len(part)
-            if current_len + part_len > CHUNK_SIZE and current_parts:
-                body = "\n\n".join(current_parts).strip()
-                chunk_text = prev_tail + body if prev_tail else body
-                chunks.append({"text": chunk_text, "chunk_index": len(chunks)})
-                prev_tail = chunk_text[-CHUNK_OVERLAP:] if len(chunk_text) >= CHUNK_OVERLAP else chunk_text
-                current_parts = [part]
-                current_len = part_len
-            else:
-                current_parts.append(part)
-                current_len += part_len
-
-    if current_parts:
-        body = "\n\n".join(current_parts).strip()
-        chunk_text = prev_tail + body if prev_tail else body
-        chunks.append({"text": chunk_text, "chunk_index": len(chunks)})
-
-    return {"chunks": chunks}
-
-
-def _split_paragraph(para: str) -> list[str]:
-    if len(para) <= CHUNK_SIZE:
-        return [para]
-    parts: list[str] = []
-    sentences = re.split(r"(?<=[.?!])\s+", para)
-    current = ""
-    for sentence in sentences:
-        if len(current) + len(sentence) + 1 > CHUNK_SIZE and current:
-            parts.append(current.strip())
-            current = sentence
-        else:
-            current = (current + " " + sentence).strip() if current else sentence
-    if current:
-        parts.append(current.strip())
-    return parts or [para]
+    """LangGraph node wrapper around the shared text chunker."""
+    return {"chunks": chunk_text(state["raw_content"] or "")}
 
 
 _SUPPORTED_DESTINATIONS = {"knowledge", "private"}

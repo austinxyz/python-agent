@@ -143,3 +143,31 @@ class TestQdrantServiceSearchPrivate:
             ]
             assert len(user_id_conditions) == 1
             assert user_id_conditions[0].match.value == "default"
+
+
+class TestQdrantServiceDeletePrivateBySourceFileId:
+    def test_user_id_is_required(self):
+        with patch("app.services.qdrant_service.QdrantClient") as MockClient:
+            client = MockClient.return_value
+            client.get_collection.return_value = MagicMock()
+            svc = QdrantService(host="localhost", port=6333)
+            with pytest.raises(TypeError):
+                svc.delete_private_by_source_file_id("entry-1")  # missing user_id
+
+    def test_filter_includes_user_id_and_source_file_id(self):
+        with patch("app.services.qdrant_service.QdrantClient") as MockClient:
+            client = MockClient.return_value
+            client.get_collection.return_value = MagicMock()
+            svc = QdrantService(host="localhost", port=6333)
+            svc.delete_private_by_source_file_id("default", "entry-1")
+
+            call_kwargs = client.delete.call_args.kwargs
+            assert call_kwargs["collection_name"] == "private"
+            selector = call_kwargs["points_selector"]
+            # Selector wraps a Filter — pull conditions out of whichever field
+            # qdrant_client uses (FilterSelector.filter or direct Filter).
+            f = getattr(selector, "filter", None) or selector
+            must = list(getattr(f, "must", []) or [])
+            keys = {c.key: c.match.value for c in must if hasattr(c, "match")}
+            assert keys.get("user_id") == "default"
+            assert keys.get("source_file_id") == "entry-1"

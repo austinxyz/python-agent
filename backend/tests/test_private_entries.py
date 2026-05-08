@@ -149,13 +149,16 @@ class TestCreateEntry:
 
             mock_q.upsert_private.assert_called_once()
             points = mock_q.upsert_private.call_args.args[0]
-            assert len(points) == 1
+            assert len(points) >= 1
+            # Chunked entries: every point shares source_file_id == entry.id;
+            # each point id is a fresh UUID (not the entry id).
             point = points[0]
-            assert point.id == entry["id"]
             assert point.payload["user_id"] == "default"
             assert point.payload["template_type"] == "tax"
             assert point.payload["title"] == "我的税务"
             assert point.payload["source_file_id"] == entry["id"]
+            assert point.id != entry["id"]
+            assert "chunk_index" in point.payload
 
         # Verify SQLite row exists
         import sqlite3
@@ -253,10 +256,15 @@ class TestDeleteEntry:
             with app.test_client() as client:
                 resp = client.delete("/api/private/entries/e1")
             assert resp.status_code == 200
-            mock_q.delete_private.assert_called_once()
-            call = mock_q.delete_private.call_args
-            passed = call.args[0] if call.args else call.kwargs.get("point_ids")
-            assert passed == ["e1"]
+            # Switched from delete_private(point_ids) to filter-based
+            # delete_private_by_source_file_id (chunked-entry support).
+            mock_q.delete_private_by_source_file_id.assert_called_once()
+            args = mock_q.delete_private_by_source_file_id.call_args.args
+            kwargs = mock_q.delete_private_by_source_file_id.call_args.kwargs
+            user_id_arg = args[0] if args else kwargs.get("user_id")
+            file_id_arg = args[1] if len(args) > 1 else kwargs.get("source_file_id")
+            assert user_id_arg == "default"
+            assert file_id_arg == "e1"
 
         # Verify SQLite row is gone
         import sqlite3
@@ -346,3 +354,114 @@ class TestEntryDirectory:
             assert resp.get_json()["directory"] == "税务/历史"
             point = mock_q.upsert_private.call_args.args[0][0]
             assert point.payload["directory"] == "税务/历史"
+
+
+class TestEntryChunking:
+    """Chunked-entry behavior — long content produces multiple Qdrant points
+    sharing source_file_id; update re-chunks via filter-delete + upsert;
+    delete uses filter-based delete."""
+
+    def test_short_entry_creates_one_point_with_chunk_index_zero(self, monkeypatch, tmp_path):
+        app = _make_app(monkeypatch, tmp_path)
+        with patch("app.routes.private.EmbeddingService") as MockEmb, \
+             patch("app.routes.private.QdrantService") as MockQ:
+            MockEmb.return_value.embed.return_value = [0.0] * 1536
+            mock_q = MockQ.return_value
+            with app.test_client() as client:
+                resp = client.post(
+                    "/api/private/entries",
+                    json={"template_type": "freeform", "title": "短", "content_json": {"content": "短内容"}},
+                )
+            assert resp.status_code == 201
+            entry = resp.get_json()
+            points = mock_q.upsert_private.call_args.args[0]
+            assert len(points) == 1
+            p = points[0]
+            assert p.payload["source_file_id"] == entry["id"]
+            assert p.payload["chunk_index"] == 0
+
+    def test_long_entry_creates_multiple_points_sharing_source_file_id(self, monkeypatch, tmp_path):
+        """Inject a fake chunker that returns 3 chunks regardless of input
+        so we can assert the upsert shape without depending on real text."""
+        app = _make_app(monkeypatch, tmp_path)
+        fake_chunks = [
+            {"text": "chunk-0", "chunk_index": 0},
+            {"text": "chunk-1", "chunk_index": 1},
+            {"text": "chunk-2", "chunk_index": 2},
+        ]
+        with patch("app.routes.private.chunk_text", return_value=fake_chunks), \
+             patch("app.routes.private.EmbeddingService") as MockEmb, \
+             patch("app.routes.private.QdrantService") as MockQ:
+            MockEmb.return_value.embed.return_value = [0.0] * 1536
+            mock_q = MockQ.return_value
+            with app.test_client() as client:
+                resp = client.post(
+                    "/api/private/entries",
+                    json={"template_type": "freeform", "title": "长", "content_json": {"content": "x"}},
+                )
+            assert resp.status_code == 201
+            entry = resp.get_json()
+            points = mock_q.upsert_private.call_args.args[0]
+            assert len(points) == 3
+            # All three share the same source_file_id == entry.id
+            assert {p.payload["source_file_id"] for p in points} == {entry["id"]}
+            # chunk_index runs 0..2
+            assert sorted(p.payload["chunk_index"] for p in points) == [0, 1, 2]
+            # Each point gets its own id (not the entry id)
+            ids = {p.id for p in points}
+            assert len(ids) == 3
+            assert entry["id"] not in ids
+            # Every point carries user_id, template_type, title, directory
+            for p in points:
+                assert p.payload["user_id"] == "default"
+                assert p.payload["template_type"] == "freeform"
+                assert p.payload["title"] == "长"
+                assert "directory" in p.payload
+            # Embedding was called once per chunk
+            assert MockEmb.return_value.embed.call_count == 3
+
+    def test_update_filter_deletes_old_chunks_then_upserts_new_ones(self, monkeypatch, tmp_path):
+        app = _make_app(monkeypatch, tmp_path)
+        db_path = str(tmp_path / "test.db")
+        _seed_entry(db_path, entry_id="e1", title="orig", content_json='{"content":"old"}',
+                    directory="税务")
+        fake_chunks = [
+            {"text": "new-0", "chunk_index": 0},
+            {"text": "new-1", "chunk_index": 1},
+        ]
+        with patch("app.routes.private.chunk_text", return_value=fake_chunks), \
+             patch("app.routes.private.EmbeddingService") as MockEmb, \
+             patch("app.routes.private.QdrantService") as MockQ:
+            MockEmb.return_value.embed.return_value = [0.0] * 1536
+            mock_q = MockQ.return_value
+            with app.test_client() as client:
+                resp = client.put(
+                    "/api/private/entries/e1",
+                    json={"title": "updated", "content_json": {"content": "new"}},
+                )
+            assert resp.status_code == 200
+            # Old chunks filter-deleted by entry id
+            mock_q.delete_private_by_source_file_id.assert_called_once()
+            args = mock_q.delete_private_by_source_file_id.call_args.args
+            kwargs = mock_q.delete_private_by_source_file_id.call_args.kwargs
+            # user_id="default" + source_file_id="e1" — accept either positional or kw
+            user_id_arg = args[0] if args else kwargs.get("user_id")
+            file_id_arg = args[1] if len(args) > 1 else kwargs.get("source_file_id")
+            assert user_id_arg == "default"
+            assert file_id_arg == "e1"
+            # New chunks upserted
+            points = mock_q.upsert_private.call_args.args[0]
+            assert len(points) == 2
+
+    def test_delete_uses_filter_based_delete(self, monkeypatch, tmp_path):
+        app = _make_app(monkeypatch, tmp_path)
+        db_path = str(tmp_path / "test.db")
+        _seed_entry(db_path, entry_id="e1")
+        with patch("app.routes.private.QdrantService") as MockQ:
+            mock_q = MockQ.return_value
+            with app.test_client() as client:
+                resp = client.delete("/api/private/entries/e1")
+            assert resp.status_code == 200
+            # Switched from delete_private(point_ids) to filter-based
+            mock_q.delete_private_by_source_file_id.assert_called_once()
+            mock_q.delete_private.assert_not_called()

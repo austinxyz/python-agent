@@ -100,3 +100,24 @@ class QdrantService:
             collection_name=PRIVATE_COLLECTION,
             points_selector=models.PointIdsList(points=point_ids),
         )
+
+    def delete_private_by_source_file_id(self, user_id: str, source_file_id: str) -> None:
+        """Filter-based delete for an entry's chunks.
+
+        With chunked private entries we no longer track point ids per entry.
+        Every chunk shares `payload.source_file_id == entry.id`, so a
+        Filter delete cleans up the entire entry — including legacy
+        single-point entries (their `payload.source_file_id` also equals
+        the entry id). user_id is mandatory: a multi-tenant version must
+        not allow cross-deletion across users.
+        """
+        flt = models.Filter(
+            must=[
+                models.FieldCondition(key="user_id", match=models.MatchValue(value=user_id)),
+                models.FieldCondition(key="source_file_id", match=models.MatchValue(value=source_file_id)),
+            ]
+        )
+        self._client.delete(
+            collection_name=PRIVATE_COLLECTION,
+            points_selector=models.FilterSelector(filter=flt),
+        )

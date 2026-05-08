@@ -1,25 +1,4 @@
-# private-entries Specification
-
-## Purpose
-TBD - created by archiving change private-data. Update Purpose after archive.
-## Requirements
-### Requirement: GET /api/private/templates returns preset template definitions
-The system SHALL implement `GET /api/private/templates` returning a JSON array of 6 template objects. Each template object SHALL contain: `type` (string key), `label` (display name in Chinese), and `fields` (array of `{key, label, type, placeholder}` field descriptors). The 6 types are: `tax`, `retirement`, `portfolio`, `personal`, `real_estate`, `freeform`. Template definitions are server-side constants — not stored in the database.
-
-#### Scenario: Returns all 6 preset templates
-- **WHEN** `GET /api/private/templates` is called
-- **THEN** the response is a JSON array with exactly 6 objects, each containing `type`, `label`, and `fields`
-
-### Requirement: GET /api/private/entries lists user entries
-The system SHALL implement `GET /api/private/entries` returning all `private_entries` rows for `user_id = "default"`, ordered by `created_at DESC`. Each item SHALL include `id`, `template_type`, `title`, `content_json`, `created_at`, `updated_at`.
-
-#### Scenario: Returns entries for current user only
-- **WHEN** `GET /api/private/entries` is called
-- **THEN** only entries where `user_id = "default"` are returned
-
-#### Scenario: Empty result when no entries exist
-- **WHEN** no private entries have been created
-- **THEN** the response is an empty JSON array
+## MODIFIED Requirements
 
 ### Requirement: POST /api/private/entries creates entry and embeds into Qdrant
 The system SHALL implement `POST /api/private/entries` accepting `{template_type, title, content_json, directory?}`. It SHALL: generate a UUID as the entry ID; derive a plain-text representation from `content_json`; **chunk the derived text using the shared text chunker (`text_chunker.chunk_text`); embed each chunk via `EmbeddingService.embed`; upsert one Qdrant point per chunk** into the `private` collection. Every chunk's payload SHALL include `{user_id: "default", template_type, title, directory, source_file_id: id, chunk_index: int}`. SQLite SHALL store one row in `private_entries` regardless of chunk count. Returns HTTP 201 with the created entry object.
@@ -58,18 +37,7 @@ The system SHALL implement `DELETE /api/private/entries/{id}` which **filter-del
 - **WHEN** a legacy entry (created before chunking, where `point.id == entry.id` and `payload.source_file_id == entry.id`) is deleted
 - **THEN** the single Qdrant point is removed via the same filter-delete path
 
-### Requirement: All Qdrant private operations MUST include user_id filter
-Every read and write on the Qdrant `private` collection MUST include `user_id = "default"` in the payload filter or payload. Omitting this filter on reads is a critical security bug.
-
-#### Scenario: Upserted Qdrant point carries user_id in payload
-- **WHEN** a private entry is created or updated
-- **THEN** the Qdrant point payload includes `user_id: "default"`
-
-#### Scenario: Listing or searching never returns other users' data
-- **WHEN** any read operation targets the `private` Qdrant collection
-- **THEN** the query includes a `user_id = "default"` payload filter
-
----
+## ADDED Requirements
 
 ### Requirement: QdrantService SHALL expose filter-based delete for the private collection
 `QdrantService` SHALL provide `delete_private_by_source_file_id(user_id: str, source_file_id: str) -> None`. The implementation SHALL use `points_selector=Filter(must=[user_id=..., source_file_id=...])`. `user_id` SHALL be a required positional argument with no default — same isolation invariant the search method enforces.
@@ -96,4 +64,3 @@ A module `backend/app/graphs/text_chunker.py` SHALL expose `chunk_text(content: 
 #### Scenario: Knowledge ingest behavior unchanged
 - **WHEN** `IngestPipeline` runs against any input previously tested
 - **THEN** `chunk_node` returns identical output (number of chunks, chunk text, chunk_index values)
-
