@@ -79,6 +79,32 @@ class TestSearchKnowledge:
         call_kwargs = qdr.search_knowledge.call_args.kwargs
         assert call_kwargs.get("domain") == "退休规划"
 
+    def test_default_limit_is_ten(self):
+        """top-k bumped from 5 → 10 to surface chunks at rank 6-10 that
+        the FBAR/FATCA query missed against the long 绿卡放弃 doc."""
+        from app.graphs import qa_agent
+
+        emb = MagicMock()
+        emb.embed.return_value = [0.0] * 1536
+        qdr = MagicMock()
+        qdr.search_knowledge.return_value = []
+
+        qa_agent.search_knowledge("anything", embedding=emb, qdrant=qdr)
+
+        assert qdr.search_knowledge.call_args.kwargs.get("limit") == 10
+
+    def test_caller_can_override_limit(self):
+        from app.graphs import qa_agent
+
+        emb = MagicMock()
+        emb.embed.return_value = [0.0] * 1536
+        qdr = MagicMock()
+        qdr.search_knowledge.return_value = []
+
+        qa_agent.search_knowledge("x", limit=3, embedding=emb, qdrant=qdr)
+
+        assert qdr.search_knowledge.call_args.kwargs.get("limit") == 3
+
 
 # ---------------------------------------------------------------------------
 # search_private
@@ -121,6 +147,24 @@ class TestSearchPrivate:
         assert item["domain"] == "房产资产"  # for private, "domain" carries template_type or directory; payload mapping documented in qa_agent.py
         assert item["source_file_id"] == "p1"
         assert item["score"] == 0.88
+
+    def test_default_limit_is_ten(self):
+        from app.graphs import qa_agent
+
+        emb = MagicMock()
+        emb.embed.return_value = [0.0] * 1536
+        qdr = MagicMock()
+        qdr.search_private.return_value = []
+
+        qa_agent.search_private("anything", embedding=emb, qdrant=qdr)
+
+        # Limit is the 3rd positional arg of QdrantService.search_private
+        # OR a kwarg; accept either form
+        call = qdr.search_private.call_args
+        passed_limit = call.kwargs.get("limit")
+        if passed_limit is None and len(call.args) >= 3:
+            passed_limit = call.args[2]
+        assert passed_limit == 10
 
 
 # ---------------------------------------------------------------------------

@@ -50,7 +50,7 @@ def search_knowledge(
     query: str,
     domain: str | None = None,
     *,
-    limit: int = 5,
+    limit: int = 10,
     embedding: EmbeddingService | None = None,
     qdrant: QdrantService | None = None,
 ) -> list[dict[str, Any]]:
@@ -68,7 +68,7 @@ def search_knowledge(
 def search_private(
     query: str,
     *,
-    limit: int = 5,
+    limit: int = 10,
     embedding: EmbeddingService | None = None,
     qdrant: QdrantService | None = None,
     user_id: str = DEFAULT_USER_ID,
