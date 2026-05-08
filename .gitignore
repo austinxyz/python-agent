@@ -34,6 +34,12 @@ frontend/dist/
 frontend/.vite/
 frontend/coverage/
 
+# Playwright
+frontend/test-results/
+frontend/playwright-report/
+frontend/blob-report/
+frontend/.playwright/
+
 # Docker
 docker-compose.override.yml
 

@@ -38,12 +38,15 @@ frontend/src/
 
 **Raw files are kept permanently:** stored at `/app/uploads/{user_id}/{file_id}/` after ingestion; SQLite `files` table records metadata.
 
+**SQLite is the source of truth; Qdrant only holds vectors.** Every write path MUST commit to SQLite first, then call Qdrant. A failed Qdrant call leaves a row whose vector can be rebuilt by a re-index job; the reverse (Qdrant succeeds, SQLite fails) leaves an orphan vector with no way to manage it. See `private.py::create_entry / update_entry / delete_entry` for the canonical pattern: SQL INSERT/UPDATE/DELETE inside `with db.connection():` block (which commits on `__exit__`), then Qdrant call **outside** the block.
+
 ## Development Conventions
 
 - Private data queries must always include `user_id` filter — never omit it
 - SSE streaming responses use Flask `Response(stream_with_context(...))`
 - LLM and Embedding providers are switched via environment variables, never hardcoded
 - `TreeNav.vue` is a shared component for both the knowledge browser and file management — do not duplicate it
+- **Two-column layout is the project's UI convention.** All major views (`IngestView`, `WikiView`, `PrivateView`) follow the same shape: gradient header (`bg-gradient-to-r from-blue-600 to-purple-600`) → flex row → fixed-width left sidebar (`w-60` ~ `w-72`, white bg, shadow) → flex-1 right panel driven by a state-machine ref (`welcome` / `domain` / `form` / `content` / `item-view` / etc.). When adding a new top-level view, follow this shape — don't invent a new layout. Shared chevron pattern: SVG `polyline 9 18 15 12 9 6` with `rotate-90` when expanded; row click toggles. See `IngestView.vue` for the canonical reference.
 
 ## Environment Variables (.env)
 
@@ -85,6 +88,16 @@ FLASK_SECRET_KEY=...
 - **text / url ingestions do not automatically save content to disk**: The original design only called `file_svc.save()` for `source_type=file`. For `text` and `url`, the cleaned content (`raw_content`) must be explicitly saved in `store_node` as `{file_id}.txt`; otherwise the `/content` endpoint returns 404.
 - **`_SAFE_COMPONENT` regex blocks non-ASCII characters**: The path guard regex `^[a-zA-Z0-9_\-. ]+$` rejects Chinese characters, so Chinese titles cannot be used as filenames. Always use `{file_id}.txt` as the stored filename for text/url ingestions.
 - **URL `/content` endpoint returning raw HTML**: The old implementation returned `resp.text` directly; the frontend then displayed HTML source in `<pre>`. The correct approach: serve the local file first if it exists; fall back to re-fetching the URL and running `_html_to_text()` before returning `text/plain`.
+
+### Database Migrations
+
+- **Backfill in the same migration step**: When adding a SQLite column whose value drives UI placement or filtering (e.g., `private_entries.directory` controls which sidebar tree node an entry appears under), the migration MUST do BOTH `ALTER TABLE ADD COLUMN` AND `UPDATE … WHERE column IS NULL OR column = ''` to backfill legacy rows from a derivation rule. Otherwise existing rows land at `''` / `NULL` and silently disappear from the user's expected location. Pattern: `_ensure_private_entries_directory_column` in `db_service.py` — PRAGMA check → ALTER TABLE → UPDATE per derivation map (e.g., `TEMPLATE_DEFAULT_DIRECTORIES`). Idempotent; safe to run on every startup.
+- **Qdrant payloads are NOT auto-backfilled by SQLite migrations**: only the SQLite column is touched. If a future feature filters Qdrant by the new field, write a separate one-shot Qdrant `set_payload` migration. For fields that are eventually overwritten on the next user edit (like `directory`), eventual consistency is acceptable — note the gap explicitly.
+
+### Frontend UI Validation
+
+- **vitest + happy-dom catches behavior, not layout.** Component tests with `@vue/test-utils` verify `data-*` selectors and store calls; they cannot tell you whether the layout is right. The original 5.x `PrivateView` passed all 11 vitest tests but was rejected on first sight after deploy — the tests verified that buttons existed and called the right actions, not that the page looked usable. Lesson: for any UX-touching change, treat the deploy + browser walkthrough as a required step, not an optional QA phase.
+- **Once a UX is validated, lock the flow in with Playwright.** The project has Playwright wired up at `frontend/e2e/` (`npm run e2e` headless, `npm run e2e:headed` for debugging). Tests run against the user-managed docker stack — bring it up first with `docker compose up -d`. Test data is isolated by the reserved `__e2e_*` title prefix and cleaned up via `afterEach`, even on failure. **Workflow:** first deploy = human eyes; once UX is signed off, add a Playwright spec covering that flow before moving on. Playwright catches regressions; it does NOT validate fresh designs.
 
 ### Git
 

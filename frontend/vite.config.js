@@ -15,6 +15,9 @@ export default defineConfig({
     }
   },
   test: {
-    environment: 'happy-dom'
+    environment: 'happy-dom',
+    // Vitest by default scans **/*.spec.ts; the Playwright e2e dir uses the
+    // same suffix but a different runner. Keep them separate.
+    exclude: ['node_modules', 'dist', 'e2e/**', 'test-results/**'],
   }
 })
