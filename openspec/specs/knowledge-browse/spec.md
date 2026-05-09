@@ -1,5 +1,7 @@
-## Requirements
+## Purpose
 
+Defines the read-only knowledge browser at `/wiki`: GET /api/wiki/tree backend endpoint plus the WikiView Vue page (two-column desktop layout with TreeNav-style domain tree + content viewer; mobile drawer variant of the tree at md-).
+## Requirements
 ### Requirement: GET /api/wiki/tree — domain tree with file entries
 The system SHALL implement `GET /api/wiki/tree` in `backend/app/routes/wiki.py`. The endpoint MUST scroll the Qdrant `knowledge` collection (no vector query, payload-only) to collect all unique `source_file_id` values grouped by `domain`. It MUST then JOIN with the SQLite `files` table to fetch `title`, `orig_name`, `filename`, `chunk_count`, `created_at` for each file. It SHALL return a JSON object mapping each domain to a list of file entry objects. Domains with no files SHALL be omitted from the response. No `user_id` filter SHALL be applied — `knowledge` is a shared collection.
 
@@ -105,3 +107,19 @@ When `rightPanelState === 'content'`, the right panel SHALL display a fixed head
 #### Scenario: Download button triggers file download
 - **WHEN** the user clicks "下载原文"
 - **THEN** the browser navigates to `/api/files/{file_id}/download` triggering an attachment download
+
+### Requirement: WikiView renders TreeNav as drawer below md
+Below the `md` breakpoint (768px), `WikiView.vue` SHALL hide the inline left TreeNav and expose it via a `☰` button (`data-tree-toggle`) in the page header. Tapping `☰` opens a full-width slide-in drawer with the TreeNav. Selecting a domain or file in the drawer SHALL close the drawer and load that content into the right panel. The right panel SHALL render at full viewport width below `md`.
+
+#### Scenario: Phone viewport hides inline tree
+- **WHEN** WikiView renders at viewport 393px
+- **THEN** `data-tree-inline` is `display: none`, `data-tree-toggle` is visible in the header, and the article/welcome content takes full width
+
+#### Scenario: Drawer selection loads file content
+- **WHEN** the user opens the drawer and taps a file entry
+- **THEN** the drawer closes and the right panel renders that file's markdown content at full width
+
+#### Scenario: Desktop layout unchanged
+- **WHEN** WikiView renders at viewport 1280px
+- **THEN** the inline tree renders as today; no `☰` button is present
+

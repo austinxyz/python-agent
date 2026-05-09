@@ -54,9 +54,9 @@
 ## Ship
 
 - [x] S.1 `./scripts/build-and-push.sh` → tag `v20260508-23592c3` + `:latest` pushed to Docker Hub.
-- [ ] S.2 NAS UGOS Docker app → Project python-agent → Pull → Apply. → USER step (UI-only).
-- [ ] S.3 Live test on actual phone (user's iPhone via 10.0.0.20:8910 over home wifi). → USER step.
+- [x] S.2 NAS UGOS Docker app → Project python-agent → Pull → Apply (user confirmed).
+- [x] S.3 Live test on actual phone (user confirmed working).
 - [x] S.4 git add / commit (commit `23592c3`).
 - [x] S.5 `git push`.
 - [x] S.6 Update `docs/log/2026-05-08.md` with the deployment summary.
-- [ ] S.7 `openspec archive mobile-friendly` — wait for user's S.2 + S.3 to verify before archiving.
+- [x] S.7 `openspec archive mobile-friendly` → `2026-05-09-mobile-friendly`. Merged 10 new requirements across 5 capability specs (chat-view +4, frontend-scaffold +3, ingest-view +1, knowledge-browse +1, private-view +1). Required prepending `## Purpose` headers to ingest-view, knowledge-browse, and frontend-scaffold first (legacy format).

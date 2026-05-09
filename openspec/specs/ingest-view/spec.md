@@ -1,5 +1,7 @@
-## Requirements
+## Purpose
 
+Defines the IngestView (`/ingest`): two-column desktop layout (domain tree + ingest form / file content) plus a mobile drawer variant for the tree at md-. Backed by the ingest-pipeline backend capability.
+## Requirements
 ### Requirement: DOMAINS constant
 The system SHALL define a hardcoded ordered list of domain names in `frontend/src/constants/domains.js` exported as `DOMAINS`. The list SHALL be: `['退休规划', '账户类型', '税务策略', '投资品种', '保险规划', '股权激励', '家庭财务', '中美对比', '遗产规划', '其他']`. `'其他'` SHALL always be last and serves as the default catch-all domain. Files whose `domain` value is not in this list are grouped under `'其他'`.
 
@@ -115,3 +117,19 @@ The `pollJob(job_id, onComplete, intervalMs, maxAttempts)` action SHALL accept a
 #### Scenario: onComplete fires on timeout
 - **WHEN** `maxAttempts` attempts are exhausted with `status='running'`
 - **THEN** `onComplete({ status: 'error', error: '摄入超时' })` is called
+
+### Requirement: IngestView renders TreeNav as drawer below md
+Below the `md` breakpoint (768px), `IngestView.vue` SHALL hide the inline left TreeNav and instead expose it via a `☰` button (`data-tree-toggle`) in the page header. Tapping the button opens a full-width slide-in drawer containing the TreeNav. Selecting a domain or file in the drawer SHALL close it and update the right-panel state-machine ref. The right panel SHALL render at full viewport width below `md`.
+
+#### Scenario: Phone viewport hides inline tree, shows ☰
+- **WHEN** IngestView renders at viewport 393px
+- **THEN** the inline tree (`data-tree-inline`) is `display: none`, a `data-tree-toggle` button is visible in the page header, and the right panel takes full width
+
+#### Scenario: Drawer selection updates the right panel
+- **WHEN** the user opens the drawer and taps a domain
+- **THEN** the drawer closes and the right panel transitions to `domain` state for that domain (state-machine ref unchanged from desktop behavior)
+
+#### Scenario: Desktop layout unchanged
+- **WHEN** IngestView renders at viewport 1280px
+- **THEN** the inline tree renders as today; no `☰` button is present
+
