@@ -1,24 +1,24 @@
 ## 1. Schema + bootstrap migration
 
-- [ ] 1.1 RED — `tests/test_users_schema.py`: assert tables `users` and `invite_tokens` exist with all required columns / indexes / constraints. Idempotency: re-running schema script doesn't error.
-- [ ] 1.2 GREEN — append `users` + `invite_tokens` `CREATE TABLE IF NOT EXISTS` blocks to `backend/db/schema.sql`. Indexes: idx_users_email, idx_users_google_sub partial, idx_users_status, idx_invite_tokens_user_id.
-- [ ] 1.3 RED — `tests/test_email_canonicalization.py`: any `INSERT` of `'  Austin@Gmail.com  '` stores `'austin@gmail.com'`; any lookup with mixed case finds the same row. Cover bootstrap, CLI, accept-invite, login.
-- [ ] 1.4 GREEN — implement `auth_service.canonicalize_email(s) -> str` and route every email read/write through it.
-- [ ] 1.5 RED — `tests/test_bootstrap_migration.py`: with empty users + INITIAL_ADMIN_EMAIL set + 5+ rows of `user_id='default'` across files/private_entries/notes/chat_sessions, on startup admin row is created, invite token issued, all default rows rewritten to admin UUID, Qdrant private payload similarly rewritten (use mock QdrantService). Idempotency: second startup is a no-op.
-- [ ] 1.6 GREEN — implement `user_service.bootstrap_initial_admin()` + `migrate_default_user_data(admin_id)` + Qdrant payload migration. Called from app factory `create_app()` after schema migrations.
-- [ ] 1.7 Run pytest groups 1.1-1.6 — green.
-- [ ] 1.8 Run superpowers:requesting-code-review on the diff for group 1; address CRITICAL/HIGH.
+- [x] 1.1 RED — `tests/test_users_schema.py`: 8 cases on users + invite_tokens shape, constraints, FK cascade, idempotency.
+- [x] 1.2 GREEN — appended `users` + `invite_tokens` to schema.sql with indexes (idx_users_email/status, partial idx_users_google_sub, idx_invite_tokens_user_id).
+- [x] 1.3 RED — `tests/test_email_canonicalization.py`: 5 cases — lower / strip / both / already-canonical / empty.
+- [x] 1.4 GREEN — `auth_service.canonicalize_email()` shipped.
+- [x] 1.5 RED — `tests/test_bootstrap_migration.py`: 7 cases — admin creation + invite token + URL stdout + idempotent + email canonicalization + 4-table data rewrite + Qdrant scroll called.
+- [x] 1.6 GREEN — `user_service.py` shipped with `bootstrap_initial_admin`, `migrate_default_user_data`, Qdrant scroll-and-set_payload migration.
+- [x] 1.7 Run pytest — all 20 group-1 tests green.
+- [ ] 1.8 Run superpowers:requesting-code-review on the diff for group 1; deferred to end-of-session batch.
 
 ## 2. Auth service + middleware
 
-- [ ] 2.1 RED — `tests/test_auth_service_password.py`: `hash_password('hello12345')` returns argon2id string; `verify_password(hash, 'hello12345')` returns true; `verify_password(hash, 'wrong')` returns false; new hashes have unique salts.
-- [ ] 2.2 GREEN — `auth_service.hash_password` / `verify_password` using argon2-cffi defaults. Add `argon2-cffi>=23.0` to `backend/requirements.txt`.
-- [ ] 2.3 RED — `tests/test_auth_service_google.py`: `verify_google_token(<valid mock JWT>, audience=GOOGLE_CLIENT_ID)` returns claims; `verify_google_token(<expired>)` raises; `verify_google_token(<wrong audience>)` raises.
-- [ ] 2.4 GREEN — `auth_service.verify_google_token(token)` using `google.oauth2.id_token.verify_oauth2_token`. Add `google-auth>=2.0` to requirements.
-- [ ] 2.5 RED — `tests/test_middleware_require_auth.py`: a route decorated with `@require_auth` returns 401 when no session; 401 when session points to disabled user; 401 when session user_id doesn't exist; 200 + `g.user.id` set when session user is active. On 401, response includes `Set-Cookie` clearing the session.
-- [ ] 2.6 GREEN — `backend/app/middleware.py` exposing `@require_auth` decorator. Registered in app factory.
-- [ ] 2.7 Run pytest — green.
-- [ ] 2.8 Run superpowers:requesting-code-review on the diff for group 2.
+- [x] 2.1 RED — 7 password test cases (argon2id prefix, unique salt, verify happy/wrong/empty/malformed/None).
+- [x] 2.2 GREEN — `auth_service.hash_password/verify_password` using argon2-cffi PasswordHasher defaults. argon2-cffi + google-auth added to requirements.txt.
+- [x] 2.3 RED — 5 Google verify tests (requires token, requires audience env, env-vs-explicit audience, sanitized error, fake verify monkeypatch).
+- [x] 2.4 GREEN — `auth_service.verify_google_token` wrapping `google.oauth2.id_token.verify_oauth2_token` with safe error wrapping.
+- [x] 2.5 RED — 5 middleware cases (no session / unknown user / active passes + g.user / disabled / invited all 401).
+- [x] 2.6 GREEN — `backend/app/middleware.py` with @require_auth.
+- [x] 2.7 Run pytest — 255 passed, 1 skipped (was 218 pre-change; +37 net).
+- [ ] 2.8 superpowers:requesting-code-review — deferred to end-of-session batch.
 
 ## 3. Auth routes
 

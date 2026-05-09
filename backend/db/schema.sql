@@ -60,3 +60,34 @@ CREATE INDEX IF NOT EXISTS idx_notes_user_id ON notes(user_id);
 CREATE INDEX IF NOT EXISTS idx_chat_messages_session_id ON chat_messages(session_id);
 CREATE INDEX IF NOT EXISTS idx_private_entries_user_id ON private_entries(user_id);
 CREATE INDEX IF NOT EXISTS idx_private_entries_created_at ON private_entries(created_at);
+
+-- Multi-user authentication (multi-user-auth-core).
+-- email is canonicalized (.strip().lower()) at every read/write per spec.
+CREATE TABLE IF NOT EXISTS users (
+    id            TEXT PRIMARY KEY,
+    email         TEXT UNIQUE NOT NULL,
+    google_sub    TEXT UNIQUE,
+    password_hash TEXT,
+    name          TEXT,
+    picture_url   TEXT,
+    role          TEXT NOT NULL DEFAULT 'member' CHECK (role IN ('admin', 'member')),
+    status        TEXT NOT NULL DEFAULT 'invited' CHECK (status IN ('invited', 'active', 'disabled')),
+    invited_at    TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
+    invited_by    TEXT,
+    activated_at  TEXT,
+    last_login_at TEXT
+);
+
+CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
+CREATE INDEX IF NOT EXISTS idx_users_status ON users(status);
+-- Partial index on google_sub (only non-null rows).
+CREATE INDEX IF NOT EXISTS idx_users_google_sub ON users(google_sub) WHERE google_sub IS NOT NULL;
+
+CREATE TABLE IF NOT EXISTS invite_tokens (
+    token      TEXT PRIMARY KEY,
+    user_id    TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    expires_at TEXT NOT NULL,
+    used_at    TEXT
+);
+
+CREATE INDEX IF NOT EXISTS idx_invite_tokens_user_id ON invite_tokens(user_id);

@@ -11,3 +11,5 @@ pymupdf>=1.24.0,<2.0.0   # installs as 'pymupdf'; import as 'import fitz' (compa
 python-multipart>=0.0.12
 httpx>=0.27.0
 chardet>=5.2.0,<6.0.0
+argon2-cffi>=23.0    # multi-user-auth-core: password hashing
+google-auth>=2.0     # multi-user-auth-core: Google ID token verification
