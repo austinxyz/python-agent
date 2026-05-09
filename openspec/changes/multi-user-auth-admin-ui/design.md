@@ -131,6 +131,50 @@ No data migration. Ship sequence:
 
 **Rollback:** previous frontend image tag pinned in NAS docker-compose.yml. The new admin endpoints stay deployed (harmless if no UI calls them) but the UI hides the admin nav and AdminUsersView. CLI invite still works.
 
+## UI Fidelity
+
+Implementation MUST follow `docs/superpowers/specs/mocks/2026-05-09-multi-user-auth-mocks.html` §2 for all visual elements.
+
+**Mock anchors used:**
+- §2 `#admin-users` — AdminUsersView desktop table with row state coloring + invite modal 3 states + delete confirmation + mobile cards + bottom sheet invite
+
+**Locked Notion design tokens (frontend tests assert via `wrapper.classes()`):**
+- Hero band: `bg-notion-brand-navy` text `text-notion-on-dark`
+- Table head: `bg-notion-surface-soft` with `border-notion-hairline-soft` row dividers
+- Active status indicator: `text-notion-brand-green` with `bg-notion-brand-green` 6px circle
+- Invited row tint: `bg-notion-tint-yellow` row + `text-notion-warning` accent + orange status dot
+- Disabled row: `bg-notion-surface-soft` + `opacity-70` + `text-notion-stone` text + line-through email
+- Admin role badge: `bg-notion-tint-lavender text-notion-brand-purple-800`
+- Member role badge: `bg-notion-tint-gray text-notion-slate`
+- Primary CTA (邀请用户 / 重发 / 启用): `bg-notion-primary text-notion-on-primary`
+- Destructive CTA (永久删除): `bg-notion-error text-notion-on-primary` (red `#e03131`)
+- Destructive secondary (删除 button in disabled row): `bg-notion-canvas border-notion-tint-rose text-notion-error`
+- Delete modal warning box: `bg-notion-tint-rose border-notion-tint-rose`
+- Status dots: green `bg-notion-brand-green` / orange `bg-notion-warning` / gray `bg-notion-steel`
+
+**Verbatim text strings (frontend tests assert via `wrapper.text()`):**
+- AdminUsersView heading: `用户管理`
+- Count summary template: `<N> 个用户 · <X> admin · <Y> active · <Z> invited · <W> disabled`
+- Self-row placeholder: `不能改自己`
+- Per-state action button labels: `↑ admin` (promote), `↓ member` (demote), `停用`, `启用`, `重发`, `取消邀请`, `删除`
+- Invite modal heading: `邀请新用户`; CTA `生成邀请链接`; cancel `取消`
+- Invite success: `✓ 邀请已生成`; copy button `复制`; expiry hint `7 天后过期。如果对方没及时点，回列表"重发邀请"。`
+- Invite 409 warning: `⚠ 该用户已存在`
+- Invite 409 sub-action labels: `已激活，无需邀请` (disabled, status=active); `重发邀请` (status=invited); `重新启用` (status=disabled)
+- Delete modal heading: `⚠ 永久删除用户`
+- Delete modal "会一并删除：" + "不会删除：" headings (verbatim)
+- Delete CTA: `永久删除` (red); cancel: `取消`
+- Mobile invite bottom sheet: same form, drag handle bar at top
+
+**Layout invariants:**
+- Desktop table: 6 columns with widths `280px 1fr 90px 110px 130px 140px` (用户 / 姓名 / 角色 / 状态 / 最后登录 / 操作)
+- Mobile cards: full width, vertical stack with status badge top-right of each card
+- Invite is a centered modal on desktop (`max-w-[420px]`), bottom sheet on mobile (slides up from bottom with `rounded-t-xl` + drag handle)
+- Delete modal on both: max-w-[480px] centered card on desktop; bottom sheet on mobile
+- 5th sidebar nav item `用户管理` only visible when `auth.currentUser?.role === 'admin'`
+
+The corresponding spec requirements in `specs/frontend-scaffold/spec.md` lock these tokens and strings. Tasks include MOCK + VISUAL DIFF sandwich tasks.
+
 ## Open Questions
 
 None blocking. Soft items:

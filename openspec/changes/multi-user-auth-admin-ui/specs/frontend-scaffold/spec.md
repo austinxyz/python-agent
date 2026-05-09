@@ -19,10 +19,10 @@ The system SHALL provide `frontend/src/stores/adminUsers.js` exporting a Pinia s
 - **THEN** `store.users` no longer contains the user with id='uuid-x'
 
 ### Requirement: AdminUsersView at /admin/users
-`frontend/src/views/AdminUsersView.vue` SHALL render the user management UI per the mocks. Behavior:
+`frontend/src/views/AdminUsersView.vue` SHALL render the user management UI per the mocks (`docs/superpowers/specs/mocks/2026-05-09-multi-user-auth-mocks.html#admin-users`). Behavior:
 - On mount, calls `adminUsers.fetchUsers()`.
-- Renders a navy hero band with title + count summary (e.g., "4 个用户 · 1 admin · 2 active · 1 invited · 0 disabled") + 【+ 邀请用户】 CTA.
-- Below: a table at `md+` (columns: 用户 / 姓名 / 角色 / 状态 / 最后登录 / 操作) or stacked cards at `md-`. Color coding: `active` green status indicator, `invited` orange + yellow row tint, `disabled` gray + 70% opacity row.
+- Renders a navy hero band (`bg-notion-brand-navy text-notion-on-dark`) with heading text `用户管理` + count summary template `<N> 个用户 · <X> admin · <Y> active · <Z> invited · <W> disabled` + 【+ 邀请用户】 CTA (`bg-notion-primary text-notion-on-primary`).
+- Below: a table at `md+` (columns: 用户 / 姓名 / 角色 / 状态 / 最后登录 / 操作) or stacked cards at `md-`. Color coding: `active` row uses `text-notion-brand-green` status dot; `invited` row uses `bg-notion-tint-yellow` background tint + `text-notion-warning` accent; `disabled` row uses `bg-notion-surface-soft` + `opacity-70` + line-through email. Role badge: admin `bg-notion-tint-lavender text-notion-brand-purple-800`; member `bg-notion-tint-gray text-notion-slate`. Self-row right cell shows verbatim text `不能改自己`.
 - Per-row actions follow state:
   - Self row (any status): right-side text "不能改自己" placeholder, no action buttons.
   - `active` member: 【↑ admin】(promote) and 【停用】 buttons.
@@ -50,11 +50,17 @@ The view is gated by the router's admin guard — non-admin trying to navigate t
 - **WHEN** AdminUsersView renders at viewport 393px
 - **THEN** the table is hidden (`hidden md:block` or equivalent) and cards are visible (`block md:hidden`)
 
+#### Scenario: Locked tokens + heading text
+- **WHEN** AdminUsersView mounts
+- **THEN** the hero band classes match `/bg-notion-brand-navy/`; visible text contains `用户管理` AND `+ 邀请用户`; the admin role badge classes match `/bg-notion-tint-lavender/` AND `/text-notion-brand-purple-800/`
+
 ### Requirement: InviteUserModal component
 `frontend/src/components/InviteUserModal.vue` SHALL render an email input, a role radio (member / admin, default member), 【生成邀请链接】 CTA, 【取消】. Submit calls `adminUsers.inviteUser(email, role)`. Render branches by the returned value:
-- Returned `{user, invite_url}` → render success state with the URL in a code block + 【复制】 button + "7 天后过期" hint.
-- Returned `{conflict: existing}` → render warning state with `existing.status`-aware sub-action: `'invited'` → 【重发邀请】(calls resendInvite); `'active'` → disabled "已激活，无需重邀"; `'disabled'` → 【重新启用】(calls updateUser with `{status: 'active'}`).
-- 【关闭】 in any state closes the modal without further action.
+- Returned `{user, invite_url}` → render success state with heading `✓ 邀请已生成`, the URL in a code block + 【复制】 button (`bg-notion-primary`), and verbatim hint text `7 天后过期。如果对方没及时点，回列表"重发邀请"。`.
+- Returned `{conflict: existing}` → render warning state with heading `⚠ 该用户已存在` and `existing.status`-aware sub-action button: `'invited'` → 【重发邀请】(calls resendInvite, `bg-notion-primary`); `'active'` → disabled button with text `已激活，无需邀请`; `'disabled'` → 【重新启用】(calls updateUser with `{status: 'active'}`).
+- 【关闭】 / 【取消】 in any state closes the modal.
+
+Modal heading: `邀请新用户`. Primary CTA: `生成邀请链接`. Active radio uses `bg-notion-tint-lavender` border + `text-notion-brand-purple-800`. Inactive radio uses `bg-notion-canvas border-notion-hairline-strong`.
 
 The modal SHALL also render correctly as a mobile bottom sheet — the parent decides which container to wrap it in based on viewport.
 
@@ -70,13 +76,19 @@ The modal SHALL also render correctly as a mobile bottom sheet — the parent de
 - **WHEN** the invite resolves to `{conflict: {status: 'invited', id: 'X'}}`
 - **THEN** a 【重发邀请】 button is visible; clicking it calls `adminUsers.resendInvite('X')`
 
+#### Scenario: Locked tokens on success state
+- **WHEN** the invite resolves to `{user, invite_url: ...}`
+- **THEN** success heading visible text matches `/✓ 邀请已生成/`; copy button classes match `/bg-notion-primary/`; visible text contains `7 天后过期`
+
 ### Requirement: DeleteUserModal component
 `frontend/src/components/DeleteUserModal.vue` SHALL render a destructive confirmation:
-- Red title "⚠ 永久删除用户".
+- Red title "⚠ 永久删除用户" (text classes match `/text-notion-error/`).
 - Sentence "<email> (<name>) 将被永久删除".
-- Pink-tinted info box listing what gets deleted (private entries, notes, chat sessions / messages — Qdrant vectors included) AND what's preserved (knowledge files).
+- Pink-tinted info box (classes match `/bg-notion-tint-rose/`) listing what gets deleted ("会一并删除：" with itemized list including private entries, notes, chat sessions / messages — Qdrant vectors included) AND what's preserved ("不会删除：" with knowledge files).
 - Confirmation input requiring user to type the local part of the email (substring before `@`).
-- 【取消】 (gray) and 【永久删除】 (red, disabled until input matches the local part).
+- 【取消】 (`bg-notion-canvas border-notion-hairline-strong`) and 【永久删除】 (`bg-notion-error text-notion-on-primary`, disabled until input matches the local part).
+
+Verbatim labels: heading `⚠ 永久删除用户`; "会一并删除：" + "不会删除：" subheadings; cancel `取消`; destructive `永久删除`.
 
 Submit calls `adminUsers.deleteUser(id)`. On success, modal closes and parent removes the user from view (the store action already handled removal). On error, modal shows inline error.
 
@@ -91,6 +103,10 @@ Submit calls `adminUsers.deleteUser(id)`. On success, modal closes and parent re
 #### Scenario: Error renders inline, modal stays open
 - **WHEN** the API returns 400 `{error: "user must be disabled before deletion"}`
 - **THEN** the modal stays open and shows the error text near the buttons
+
+#### Scenario: Locked tokens + heading text
+- **WHEN** DeleteUserModal mounts for `linda@gmail.com`
+- **THEN** heading classes match `/text-notion-error/` and visible text matches `/⚠ 永久删除用户/`; warning-box classes match `/bg-notion-tint-rose/`; destructive button classes match `/bg-notion-error/`
 
 ### Requirement: AppLayout 5th sidebar nav for admin users
 `AppLayout.vue` SHALL conditionally render a 5th sidebar nav item `用户管理` (gear / settings icon) BELOW the existing 4 nav items, visible only when `auth.currentUser?.role === 'admin'`. Active state styling (`bg-notion-tint-lavender text-notion-brand-purple-800`) applies when the route starts with `/admin/`. Mobile bottom-tab is unchanged (still 5 items: 知识库 / 摄入 / 对话 / 私有数据 / 我); the admin link on mobile lives inside the `/me` view (already rendered conditionally on role from the core change).

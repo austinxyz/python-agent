@@ -60,25 +60,37 @@
 
 ## 7. Frontend views (Login / AcceptInvite / ChangePassword / Me)
 
-- [ ] 7.1 RED — `frontend/tests/views/LoginView.test.js`: form submits → `auth.loginWithPassword`; GSI button conditional on `config.has_google` AND host (mock `window.location` for tests); error message renders on rejected promise; successful login navigates per ?redirect query.
-- [ ] 7.2 GREEN — `frontend/src/views/LoginView.vue` per the mock at `docs/superpowers/specs/mocks/2026-05-09-multi-user-auth-mocks.html#login-flow`. Renders inside AppLayout (sidebar visible).
-- [ ] 7.3 RED — `frontend/tests/views/AcceptInviteView.test.js`: mount with `?token=abc` mocks `/api/auth/invite/abc` (valid / expired / used / invalid); valid case shows form + welcome banner with inviter name; invalid token shows error UI; submit calls `auth.acceptInvite` and pushes /chat on success.
-- [ ] 7.4 GREEN — `frontend/src/views/AcceptInviteView.vue` per the mock §3 of the mocks doc.
-- [ ] 7.5 RED — `frontend/tests/views/ChangePasswordView.test.js`: 3 fields render; submit calls `auth.changePassword`; mismatch confirm prevents submit; old-password-wrong renders inline error.
-- [ ] 7.6 GREEN — `frontend/src/views/ChangePasswordView.vue` per mock §4.
-- [ ] 7.7 RED — `frontend/tests/views/MeView.test.js`: shows current user info; "修改密码" link only when `password_hash` is set; "退出登录" calls `auth.logout` and goes to /login.
-- [ ] 7.8 GREEN — `frontend/src/views/MeView.vue`.
-- [ ] 7.9 Run vitest — full suite green.
-- [ ] 7.10 Run superpowers:requesting-code-review on the diff for group 7.
+- [ ] 7.1 RED — `frontend/tests/views/LoginView.test.js`: form submits → `auth.loginWithPassword`; GSI button conditional on `config.has_google` AND host (mock `window.location` for tests); error message renders on rejected promise; successful login navigates per ?redirect query. **Per spec, also assert `wrapper.classes()` includes `bg-notion-canvas` + `max-w-[380px]` on root, `bg-notion-primary` on CTA; assert `wrapper.text()` contains `登录` + `没账号？请管理员发邀请链接`.**
+- [ ] 7.2 MOCK — open `docs/superpowers/specs/mocks/2026-05-09-multi-user-auth-mocks.html#login-flow`. Note: navy hero band `bg-notion-brand-navy`, card `max-w-[380px] bg-notion-canvas border-notion-hairline`, primary CTA `bg-notion-primary`, divider literal `或`, GSI button outline style.
+- [ ] 7.3 GREEN — `frontend/src/views/LoginView.vue`. Renders inside AppLayout (sidebar visible).
+- [ ] 7.4 VISUAL DIFF — `npm run dev:up`, navigate to `/login` in browser, eyeball against mock §1; fix any drift in tokens / spacing / text BEFORE the group review.
+- [ ] 7.5 RED — `frontend/tests/views/AcceptInviteView.test.js`: mount with `?token=abc` mocks `/api/auth/invite/abc` (valid / expired / used / invalid); valid case shows welcome banner classes match `bg-notion-tint-lavender`; visible text contains `设置你的密码` and `完成注册并登录`; 3 error states each show their literal heading; submit calls `auth.acceptInvite` and pushes /chat on success.
+- [ ] 7.6 MOCK — open `mocks doc#accept-invite`. Note: welcome banner `bg-notion-tint-lavender`, locked email field with `disabled` attribute, error states use `text-notion-warning` (expired) / `text-notion-brand-green` (used) / `text-notion-error` (invalid).
+- [ ] 7.7 GREEN — `frontend/src/views/AcceptInviteView.vue`.
+- [ ] 7.8 VISUAL DIFF — navigate to `/accept-invite?token=...` (use a real token from CLI invite); manually trip the 3 error states by submitting bad/expired/used tokens; fix drift.
+- [ ] 7.9 RED — `frontend/tests/views/ChangePasswordView.test.js`: 3 fields render; submit calls `auth.changePassword`; mismatch confirm prevents submit; old-password-wrong renders inline error with `text-notion-error`. Assert visible text contains `修改密码` + `保存`.
+- [ ] 7.10 MOCK — open `mocks doc#change-password`. Simple 3-field form, primary CTA, secondary cancel.
+- [ ] 7.11 GREEN — `frontend/src/views/ChangePasswordView.vue`.
+- [ ] 7.12 VISUAL DIFF — navigate to `/change-password` while logged in; submit wrong old password; verify inline error styling.
+- [ ] 7.13 RED — `frontend/tests/views/MeView.test.js`: shows current user info; "修改密码" link only when `password_hash` is set; "退出登录" button has classes matching `border-notion-tint-rose` (hover) and calls `auth.logout` + goes to /login. Visible text contains `修改密码` + `退出登录`.
+- [ ] 7.14 MOCK — open `mocks doc#login-flow` (mobile section showing "我" tab). Profile card pattern + buttons stacked.
+- [ ] 7.15 GREEN — `frontend/src/views/MeView.vue`.
+- [ ] 7.16 VISUAL DIFF — at mobile viewport (Chrome DevTools iPhone 14), tap "我" tab from `/chat`; eyeball.
+- [ ] 7.17 Run vitest — full suite green.
+- [ ] 7.18 Run superpowers:requesting-code-review on the diff for group 7.
 
 ## 8. AppLayout user pill + mobile 5th tab
 
-- [ ] 8.1 RED — `frontend/tests/components/AppLayout.test.js` extension: at desktop viewport with `auth.currentUser=null`, sidebar top has gray pill with "登录" button; with currentUser set, pill shows email truncated + role badge + ⏻ icon. At mobile viewport, `[data-bottom-tabs]` has 5 children; last one is "我" linking to `/me`.
-- [ ] 8.2 GREEN — `frontend/src/components/AppLayout.vue`: insert user pill `<UserPill>` at top of desktop sidebar (above the logo block); add 5th `<router-link to="/me">` to bottom-tab nav.
-- [ ] 8.3 RED — `frontend/tests/components/UserPill.test.js`: avatar uses Google picture if present, else first letter of email; role badge shows "admin" with lavender bg only when role='admin'; logout icon dispatches `auth.logout`.
-- [ ] 8.4 GREEN — `frontend/src/components/UserPill.vue` (small standalone component, ~80 lines).
-- [ ] 8.5 Run vitest — full suite green.
-- [ ] 8.6 Run superpowers:requesting-code-review on the diff for group 8.
+- [ ] 8.1 RED — `frontend/tests/components/AppLayout.test.js` extension: at desktop viewport with `auth.currentUser=null`, sidebar top has `data-user-pill` element with classes `bg-notion-canvas` + visible text `未登录` + `登录` button (classes `bg-notion-primary`). With admin user, pill shows admin badge with classes matching `bg-notion-tint-lavender` AND `text-notion-brand-purple-800`, visible text includes `admin`. At mobile viewport, `[data-bottom-tabs]` has 5 children; last one is "我" linking to `/me`.
+- [ ] 8.2 MOCK — open `mocks doc#login-flow` desktop sidebar variant (both logged-out and logged-in panels). Note: pill at TOP of sidebar (above logo, NOT bottom); 28×28 avatar circle; logout icon `⏻` not text.
+- [ ] 8.3 GREEN — `frontend/src/components/AppLayout.vue`: insert `<UserPill>` at top of desktop sidebar (above the logo block); add 5th `<router-link to="/me">` to bottom-tab nav.
+- [ ] 8.4 VISUAL DIFF — at desktop viewport, log out and log back in; verify pill state transitions look right; verify mobile bottom-tab has 5 tabs.
+- [ ] 8.5 RED — `frontend/tests/components/UserPill.test.js`: avatar uses Google picture if present, else first letter of email on hash-derived background color; role badge shows "admin" with `bg-notion-tint-lavender` only when role='admin' (member has no badge); logout icon button has title attribute `退出` and dispatches `auth.logout`.
+- [ ] 8.6 MOCK — same anchor as 8.2; zoom in on the pill structure (avatar, name, badge, email truncated, ⏻).
+- [ ] 8.7 GREEN — `frontend/src/components/UserPill.vue` (small standalone component, ~80 lines).
+- [ ] 8.8 VISUAL DIFF — same as 8.4 (already covered when integrated into AppLayout).
+- [ ] 8.9 Run vitest — full suite green.
+- [ ] 8.10 Run superpowers:requesting-code-review on the diff for group 8.
 
 ## 9. Live integration
 

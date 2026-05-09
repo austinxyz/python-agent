@@ -30,12 +30,16 @@ This change builds on `multi-user-auth-core`. Ensure that change is archived (or
 
 ## 4. InviteUserModal + DeleteUserModal components
 
-- [ ] 4.1 RED — `frontend/tests/components/InviteUserModal.test.js`: form submission calls `adminUsers.inviteUser`; success state shows invite URL + copy button (data-copy-btn); 409 with status='active' shows disabled "已激活" button; 409 with status='invited' shows 【重发邀请】 calling `adminUsers.resendInvite`; 409 with status='disabled' shows 【重新启用】.
-- [ ] 4.2 GREEN — `frontend/src/components/InviteUserModal.vue` per mock §2 ("+邀请用户" 弹窗的三个状态").
-- [ ] 4.3 RED — `frontend/tests/components/DeleteUserModal.test.js`: type-to-confirm gates the red 【永久删除】 button; success closes modal; error renders inline.
-- [ ] 4.4 GREEN — `frontend/src/components/DeleteUserModal.vue` per mock "删除确认" section.
-- [ ] 4.5 Run vitest — green.
-- [ ] 4.6 Run superpowers:requesting-code-review on the diff for group 4.
+- [ ] 4.1 RED — `frontend/tests/components/InviteUserModal.test.js`: form submission calls `adminUsers.inviteUser`; success state shows visible text matching `/✓ 邀请已生成/`, code block with URL, copy button (data-copy-btn) classes match `/bg-notion-primary/`, hint text contains `7 天后过期`; 409 with status='active' shows disabled button with text `已激活，无需邀请`; 409 with status='invited' shows 【重发邀请】 calling `adminUsers.resendInvite`; 409 with status='disabled' shows 【重新启用】 calling `adminUsers.updateUser` with `{status: 'active'}`. Modal heading classes match `/text-notion-ink/` with text `邀请新用户`.
+- [ ] 4.2 MOCK — open `docs/superpowers/specs/mocks/2026-05-09-multi-user-auth-mocks.html#admin-users` and locate the "+ 邀请用户 弹窗的三个状态" 3-panel section. Note: form (radio active = `bg-notion-tint-lavender border-notion-primary`), success (URL in `<code>` with copy button right of it), 409 (disabled button styling).
+- [ ] 4.3 GREEN — `frontend/src/components/InviteUserModal.vue`.
+- [ ] 4.4 VISUAL DIFF — In `/admin/users` (admin-only flow tested in group 9), open invite modal; deliberately submit a duplicate to trigger 409; eyeball each of 3 states against mock; fix drift.
+- [ ] 4.5 RED — `frontend/tests/components/DeleteUserModal.test.js`: type-to-confirm gates the red 【永久删除】 button (disabled until input value === local-part); heading classes match `/text-notion-error/` with text `⚠ 永久删除用户`; warning box classes match `/bg-notion-tint-rose/`; destructive button classes match `/bg-notion-error/`; success closes modal; error renders inline.
+- [ ] 4.6 MOCK — same anchor, locate "删除确认" section. Note: red destructive CTA; type-to-confirm input; pink warning box with bullet lists.
+- [ ] 4.7 GREEN — `frontend/src/components/DeleteUserModal.vue`.
+- [ ] 4.8 VISUAL DIFF — Trigger delete confirmation on a disabled user; verify inputs lock the button; eyeball modal vs mock.
+- [ ] 4.9 Run vitest — green.
+- [ ] 4.10 Run superpowers:requesting-code-review on the diff for group 4.
 
 ## 5. AdminUsersView
 
@@ -50,18 +54,22 @@ This change builds on `multi-user-auth-core`. Ensure that change is archived (or
   - At viewport 393px, table is hidden, cards visible.
   - 【+】 button in header opens bottom sheet (not modal).
   - Cards stack with the same status color tints + appropriate per-state actions.
-- [ ] 5.3 GREEN — `frontend/src/views/AdminUsersView.vue` per mock §2. Use `<InviteUserModal>` and `<DeleteUserModal>` components from group 4.
-- [ ] 5.4 Run vitest — green.
-- [ ] 5.5 Run superpowers:requesting-code-review on the diff for group 5.
+- [ ] 5.3 MOCK — open `mocks doc#admin-users`. Note: navy hero band with right-aligned 【+ 邀请用户】 CTA; table column widths `280px 1fr 90px 110px 130px 140px`; row tints by status (active=plain, invited=`bg-notion-tint-yellow`, disabled=`bg-notion-surface-soft opacity-70` + line-through email); badge tokens (admin=lavender, member=gray); per-state action buttons. Mobile cards use the same color coding. Self-row shows `不能改自己` placeholder text in the actions cell.
+- [ ] 5.4 GREEN — `frontend/src/views/AdminUsersView.vue`. Use `<InviteUserModal>` and `<DeleteUserModal>` components from group 4.
+- [ ] 5.5 VISUAL DIFF — `/admin/users` with 3-4 fixture users covering each status; eyeball desktop table against mock; switch to mobile viewport (Chrome DevTools 393×852); eyeball cards. Verify self-row shows "不能改自己" not buttons. Fix drift.
+- [ ] 5.6 Run vitest — green.
+- [ ] 5.7 Run superpowers:requesting-code-review on the diff for group 5.
 
 ## 6. AppLayout 5th sidebar item + router registration
 
 - [ ] 6.1 RED — `frontend/tests/components/AppLayout.test.js` extension: at desktop viewport with admin user, sidebar has 5 nav links (the existing 4 + "用户管理"); with member user, only 4; logged-out, only 4. Mobile bottom-tab unchanged at 5 items.
-- [ ] 6.2 GREEN — `frontend/src/components/AppLayout.vue`: insert conditional 5th `<router-link to="/admin/users" v-if="auth.currentUser?.role === 'admin'">` in sidebar nav.
-- [ ] 6.3 RED — `frontend/tests/router-admin-route.test.js`: `/admin/users` registered with `meta.requiresAdmin: true`; admin navigation succeeds; member redirected to `/chat`; unauthenticated redirected to `/login?redirect=/admin/users`.
-- [ ] 6.4 GREEN — `frontend/src/router/index.js`: register the route. Verify the `meta.requiresAdmin` guard already exists from core change and works correctly.
-- [ ] 6.5 Run vitest — full suite green.
-- [ ] 6.6 Run superpowers:requesting-code-review on the diff for group 6.
+- [ ] 6.2 MOCK — open `mocks doc#admin-users`, look at the desktop sidebar in the table screenshot. Note: 5th nav item "⚙ 用户管理" appears below 私有数据; active state matches existing pattern `bg-notion-tint-lavender text-notion-brand-purple-800`.
+- [ ] 6.3 GREEN — `frontend/src/components/AppLayout.vue`: insert conditional 5th `<router-link to="/admin/users" v-if="auth.currentUser?.role === 'admin'">` in sidebar nav.
+- [ ] 6.4 VISUAL DIFF — at desktop, log in as admin (5 nav items visible) and as member (4 only). Tap into /admin/users; verify active state styling.
+- [ ] 6.5 RED — `frontend/tests/router-admin-route.test.js`: `/admin/users` registered with `meta.requiresAdmin: true`; admin navigation succeeds; member redirected to `/chat`; unauthenticated redirected to `/login?redirect=/admin/users`.
+- [ ] 6.6 GREEN — `frontend/src/router/index.js`: register the route. Verify the `meta.requiresAdmin` guard already exists from core change and works correctly.
+- [ ] 6.7 Run vitest — full suite green.
+- [ ] 6.8 Run superpowers:requesting-code-review on the diff for group 6.
 
 ## 7. CLAUDE.md update — UI is primary, CLI is fallback
 

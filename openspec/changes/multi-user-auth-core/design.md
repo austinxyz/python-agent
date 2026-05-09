@@ -149,6 +149,43 @@ This is a frontend + backend change with a one-time bootstrap step. Ship sequenc
 
 **Rollback:** previous frontend image tag pinned in NAS docker-compose.yml. Schema changes are additive (new tables) — rolling back the image leaves the new tables present but unused, which is fine.
 
+## UI Fidelity
+
+Implementation MUST follow `docs/superpowers/specs/mocks/2026-05-09-multi-user-auth-mocks.html` for all visual elements. Specifically:
+
+**Mock anchors used by this change:**
+- §1 `#login-flow` — LoginView desktop card + sidebar user pill (logged-out + logged-in states) + mobile login full-screen + mobile bottom-tab "我"
+- §3 `#accept-invite` — AcceptInviteView welcome banner + form + 3 error states + mobile equivalent
+- §4 `#change-password` — ChangePasswordView card
+
+**Locked Notion design tokens (frontend tests assert these via `wrapper.classes()`):**
+- Hero band background: `bg-notion-brand-navy` (#0a1530), text `text-notion-on-dark`
+- Page surface: `bg-notion-canvas` (#fff) + `bg-notion-surface-soft` (#fafaf9)
+- Hairline borders: `border-notion-hairline` (#e5e3df) + `border-notion-hairline-soft` for rows
+- Primary CTA button: `bg-notion-primary` (#5645d4) `text-notion-on-primary`, hover `bg-notion-primary-pressed`
+- Secondary / outline button: `bg-transparent border-notion-hairline-strong`
+- Active nav / active row: `bg-notion-tint-lavender` (#e6e0f5) + `text-notion-brand-purple-800` (#391c57)
+- Welcome banner (accept-invite): `bg-notion-tint-lavender` border-radius rounded-lg
+- Error background / row: `bg-notion-tint-rose` (#fde0ec) + `text-notion-error` (#e03131) text
+- Success state: `bg-notion-tint-mint` (#d9f3e1) + `text-notion-brand-green` (#1aae39)
+- Invited row tint: `bg-notion-tint-yellow` (#fef7d6) + `text-notion-warning` (#dd5b00) accent
+
+**Verbatim text strings (frontend tests assert these via `wrapper.text()`):**
+- LoginView: heading `登录`; subtitle `使用邮箱密码 或 Google 账号`; CTA `登录`; divider `或`; Google button `Sign in with Google`; conditional hint `仅 HTTPS / localhost 可用`; bottom hint `没账号？请管理员发邀请链接`
+- AcceptInviteView: heading `设置你的密码`; help text `至少 8 个字符。设好后用邮箱+密码登录。`; CTA `完成注册并登录`; divider `或者`; Google button `用 Google 账号激活`; expired error `邀请链接已过期`; used error `邀请已激活`; invalid error `链接无效`
+- ChangePasswordView: heading `修改密码`; CTA `保存`; cancel `取消`
+- AppLayout user pill (logged-out): `未登录` + button `登录`
+- AppLayout user pill (logged-in): admin badge text `admin` (no badge for member); logout icon button title `退出`
+- MeView: heading reads from current view title (no fixed); buttons `修改密码`, `退出登录`, conditional admin link `用户管理`
+
+**Layout invariants:**
+- LoginView card: `max-w-[380px]` centered in main pane; sidebar VISIBLE (not full-screen on desktop). On mobile (< md), card fills viewport — no sidebar.
+- User pill on desktop sidebar: TOP of sidebar (above logo), 56px tall.
+- Mobile bottom-tab: 5 tabs total (`知识库 / 摄入 / 对话 / 私有数据 / 我`); 5th tab is router-link to `/me`.
+- Default route after login: `/chat` (NOT `/wiki`).
+
+The corresponding spec requirements in `specs/frontend-scaffold/spec.md` lock these tokens and strings. Tasks include MOCK + VISUAL DIFF sandwich tasks that force opening the mock and eyeballing rendered UI against it before code review.
+
 ## Open Questions
 
 None blocking. Soft items for follow-up:

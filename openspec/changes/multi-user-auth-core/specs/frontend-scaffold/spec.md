@@ -44,7 +44,11 @@ The router SHALL also set the root path `/` to redirect to `/chat` (changed from
 - **THEN** no `fetchMe` call is made and no redirect occurs
 
 ### Requirement: LoginView at /login
-`frontend/src/views/LoginView.vue` SHALL render a centered card (max-width 380px on desktop) inside the standard AppLayout main pane (sidebar visible). Card contains: email input, password input, "登录" CTA button, divider "或", "Sign in with Google" button (rendered ONLY when `auth.config.has_google === true` AND (`window.location.protocol === 'https:'` OR hostname matches `^(localhost|127\.0\.0\.1)$`)). Error messages render inline above the form. After successful login, push to `?redirect` if present, else `/chat`.
+`frontend/src/views/LoginView.vue` SHALL render a centered card (`max-w-[380px]` on desktop) inside the standard AppLayout main pane (sidebar visible). The card uses `bg-notion-canvas` background with `border-notion-hairline` border. The CTA button uses `bg-notion-primary text-notion-on-primary`. The Google button uses `bg-notion-canvas border-notion-hairline-strong`.
+
+Card contents (in this order): logo block (navy `bg-notion-brand-navy` 知 mark), heading `登录` (text `text-notion-ink`), subtitle `使用邮箱密码 或 Google 账号`, email input, password input, "登录" CTA button, divider with literal text `或`, "Sign in with Google" button rendered ONLY when `auth.config.has_google === true` AND (`window.location.protocol === 'https:'` OR `hostname` matches `^(localhost|127\.0\.0\.1)$`), and a final hint text `没账号？请管理员发邀请链接` styled `text-notion-stone`.
+
+Error messages render inline above the form using `text-notion-error` color. After successful login, push to `?redirect` if present, else `/chat`.
 
 #### Scenario: GSI button rendered on https origin
 - **WHEN** the page loads on `https://example.com/login` and `config.has_google` is true
@@ -58,8 +62,14 @@ The router SHALL also set the root path `/` to redirect to `/chat` (changed from
 - **WHEN** user submits valid credentials with URL `/login?redirect=/private`
 - **THEN** after the action resolves, the router is at `/private`
 
+#### Scenario: Locked tokens + text strings present
+- **WHEN** LoginView renders
+- **THEN** the card root has classes matching `/max-w-\[380px\]/` AND `/bg-notion-canvas/`; the CTA button classes match `/bg-notion-primary/`; the visible text contains both `登录` and `没账号？请管理员发邀请链接`
+
 ### Requirement: AcceptInviteView at /accept-invite
-`frontend/src/views/AcceptInviteView.vue` SHALL read `token` query param, call `GET /api/auth/invite/<token>` on mount, and render one of: (a) a welcome banner ("<inviter> 邀请你") + locked email field + new-password + confirm-password fields + "完成注册并登录" CTA, (b) error states for expired / used / invalid tokens. On submission with matching passwords (both ≥ 8 chars), POST to `/api/auth/accept-invite`. Success → push to `/chat`.
+`frontend/src/views/AcceptInviteView.vue` SHALL read `token` query param, call `GET /api/auth/invite/<token>` on mount, and render one of: (a) a welcome banner ("<inviter> 邀请你加入") + locked email field + new-password + confirm-password fields + "完成注册并登录" CTA, (b) error states for expired / used / invalid tokens. On submission with matching passwords (both ≥ 8 chars), POST to `/api/auth/accept-invite`. Success → push to `/chat`.
+
+The welcome banner uses `bg-notion-tint-lavender` background. The CTA uses `bg-notion-primary text-notion-on-primary`. Error states use icons + `text-notion-warning` (expired), `text-notion-brand-green` (used), `text-notion-error` (invalid). Heading text is `设置你的密码`; help text is `至少 8 个字符。设好后用邮箱+密码登录。`. The 3 error UI strings are `邀请链接已过期` / `邀请已激活` / `链接无效` (verbatim).
 
 #### Scenario: Valid token shows welcome + form
 - **WHEN** AcceptInviteView mounts with a valid unused unexpired token
@@ -72,6 +82,10 @@ The router SHALL also set the root path `/` to redirect to `/chat` (changed from
 #### Scenario: Expired token renders error
 - **WHEN** the GET /api/auth/invite/<token> response has `expired: true`
 - **THEN** an "邀请已过期" message renders with text directing user to admin
+
+#### Scenario: Locked tokens + text strings on welcome banner
+- **WHEN** AcceptInviteView mounts with valid token
+- **THEN** welcome banner element has classes matching `/bg-notion-tint-lavender/`; visible text contains `设置你的密码` and `完成注册并登录`
 
 ### Requirement: ChangePasswordView at /change-password
 `frontend/src/views/ChangePasswordView.vue` SHALL render an authenticated-only form with old / new / confirm fields. Submit POSTs to `/api/auth/change-password`. Success shows a brief success state then navigates to `/me` (mobile) or stays on the page with a confirmation message (desktop). Error messages render inline.
@@ -98,6 +112,8 @@ The router SHALL also set the root path `/` to redirect to `/chat` (changed from
 ### Requirement: AppLayout user pill (sidebar top + mobile 5th tab)
 `AppLayout.vue` SHALL add a user pill at the **top** of the desktop sidebar (above the existing logo and nav). Logged-out state: gray placeholder avatar + "未登录" label + 紫色【登录】button (router-link to /login). Logged-in state: avatar (Google `picture_url` if present, else first letter of email on a hash-derived background color) + name + role badge ("admin" lavender background for admins; member has no badge) + email truncated + ⏻ logout icon button. Clicking the pill (logged-in only) opens an upward-flyout menu with 修改密码 / 退出登录 entries.
 
+User pill background uses `bg-notion-canvas` with `border-notion-hairline`. The 登录 button uses `bg-notion-primary text-notion-on-primary`. The admin role badge uses `bg-notion-tint-lavender text-notion-brand-purple-800`. The logout icon button uses `text-notion-steel hover:text-notion-error`. Verbatim text: logged-out label `未登录`; CTA text `登录`; logout icon button title `退出`.
+
 The mobile bottom-tab nav SHALL gain a **5th tab "我"** linking to `/me`. The active state of "我" mirrors the existing tab styling (`bg-notion-tint-lavender text-notion-brand-purple-800`). Total mobile tabs: 知识库 / 摄入 / 对话 / 私有数据 / 我.
 
 #### Scenario: Logged-out sidebar shows login button
@@ -115,6 +131,14 @@ The mobile bottom-tab nav SHALL gain a **5th tab "我"** linking to `/me`. The a
 #### Scenario: Mobile when logged out: bottom-tab still 5 items but tap → /login redirect
 - **WHEN** AppLayout renders at mobile viewport with `auth.currentUser=null` AND user is on /login (so tab is visible)
 - **THEN** clicking any tab triggers the router auth guard → redirects to /login (no error)
+
+#### Scenario: User pill tokens + text locked
+- **WHEN** AppLayout renders with `auth.currentUser=null`
+- **THEN** the pill has `data-user-pill` attribute, classes match `/bg-notion-canvas/`, the 登录 button has classes matching `/bg-notion-primary/`, visible text contains `未登录` and `登录`
+
+#### Scenario: Admin role badge uses lavender tokens
+- **WHEN** AppLayout renders with `auth.currentUser.role='admin'`
+- **THEN** the admin badge element classes match `/bg-notion-tint-lavender/` AND `/text-notion-brand-purple-800/`; visible text contains `admin`
 
 ### Requirement: Default landing changed from /wiki to /chat
 The router's root redirect (`{ path: '/', redirect: ... }`) and the post-login redirect SHALL both target `/chat` instead of `/wiki` (the previous default). Per-feature views are unchanged.
