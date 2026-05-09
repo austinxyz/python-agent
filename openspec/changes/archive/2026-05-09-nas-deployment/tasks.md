@@ -92,12 +92,12 @@
 
 ## NAS re-deploy after qdrant port fix (USER step)
 
-- [ ] R.1 Replace `/volume1/docker/python-agent/docker-compose.yml` on the NAS with the latest version (the one that omits the qdrant `ports:` block). UGOS file manager → upload + overwrite.
-- [ ] R.2 UGOS Docker app → Project → python-agent → Apply. The qdrant container will be recreated without a host port binding; api still reaches qdrant via the docker network.
-- [ ] R.3 Verify `curl http://10.0.0.20:8912/collections` from your laptop — should now refuse the connection. Browser at `http://10.0.0.20:8910` still works as before.
+- [x] R.1 docker-compose.yml on NAS replaced with the latest (no qdrant `ports:` block).
+- [x] R.2 UGOS Docker app → Apply.
+- [x] R.3 Verified from this machine: `curl http://10.0.0.20:8912/collections` → connection refused (exit 7); `:8910` → 200; `:8911/api/health` → 200. api still talks to qdrant through docker internal network.
 
 ## Ship
 
-- [ ] S.1 `git add` + commit the review-fix batch (qdrant port removal, --wait, partial-push doc, MSYS test).
-- [ ] S.2 `git push`.
+- [x] S.1 `git add` + commit (commits c513f49, b9fcea6, e07692e).
+- [x] S.2 `git push` to origin/master.
 - [ ] S.3 `openspec archive nas-deployment` to merge requirements into `openspec/specs/project-infrastructure/spec.md`.
