@@ -53,10 +53,10 @@
 
 ## Ship
 
-- [ ] S.1 `./scripts/build-and-push.sh` to push the new frontend image (api unchanged but gets re-pushed under the new tag — that's fine, same content).
-- [ ] S.2 NAS UGOS Docker app → Project python-agent → Pull → Apply.
-- [ ] S.3 Live test on actual phone (user's iPhone via 10.0.0.20:8910 over home wifi). If broken, roll back via tag pin in UGOS file manager.
-- [ ] S.4 git add / commit with `feat: mobile-friendly responsive layout + PWA` style message.
-- [ ] S.5 `git push`.
-- [ ] S.6 Update `docs/log/<today>.md` with the deployment summary.
-- [ ] S.7 `openspec archive mobile-friendly` to merge requirements into the affected capability specs.
+- [x] S.1 `./scripts/build-and-push.sh` → tag `v20260508-23592c3` + `:latest` pushed to Docker Hub.
+- [ ] S.2 NAS UGOS Docker app → Project python-agent → Pull → Apply. → USER step (UI-only).
+- [ ] S.3 Live test on actual phone (user's iPhone via 10.0.0.20:8910 over home wifi). → USER step.
+- [x] S.4 git add / commit (commit `23592c3`).
+- [x] S.5 `git push`.
+- [x] S.6 Update `docs/log/2026-05-08.md` with the deployment summary.
+- [ ] S.7 `openspec archive mobile-friendly` — wait for user's S.2 + S.3 to verify before archiving.
