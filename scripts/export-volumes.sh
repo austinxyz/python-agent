@@ -11,6 +11,10 @@
 
 set -e
 
+# Disable Git Bash MSYS path conversion — it mangles container-internal paths
+# like "/dest" by treating them as Unix paths and rewriting to Windows form.
+export MSYS_NO_PATHCONV=1
+
 VOLUMES=(qdrant_data sqlite_data uploads)
 OUT_DIR="$(pwd)/migration"
 

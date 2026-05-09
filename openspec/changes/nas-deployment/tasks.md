@@ -50,14 +50,14 @@
 
 ## 7. Build and push images
 
-- [ ] 7.1 Run `./scripts/build-and-push.sh`. Confirm the tag is `vYYYYMMDD-<git short sha>` of the current HEAD.
-- [ ] 7.2 Verify on Docker Hub web UI that all 4 image tags (api/frontend × latest/dated) are visible and the size is reasonable (api ~570 MB compressed-layer, frontend ~70 MB).
-- [ ] 7.3 In UGOS Docker app → **Image** → pull `xuaustin/python-agent-api:latest`, `xuaustin/python-agent-frontend:latest`, `qdrant/qdrant:v1.9.2` once via the UI's image search/pull dialog. Confirms image visibility and saves Apply time in group 9. If a pull is rate-limited, log into Docker Hub via UGOS Docker UI's registry settings.
+- [x] 7.1 Run `./scripts/build-and-push.sh`. Tag = `v20260508-c513f49`. Both images pushed.
+- [ ] 7.2 Verify on Docker Hub web UI that all 4 image tags (api/frontend × latest/dated) are visible. → USER step (browser).
+- [ ] 7.3 In UGOS Docker app → **Image** → pull `xuaustin/python-agent-api:latest`, `xuaustin/python-agent-frontend:latest`, `qdrant/qdrant:v1.9.2` once via the UI's image search/pull dialog. → USER step (NAS UI).
 
 ## 8. NAS-side migration execution (Phase 1+2 of the design)
 
-- [ ] 8.1 On Windows: `docker compose stop` (NOT `down -v` — keep volumes). Verify with `docker compose ps`.
-- [ ] 8.2 Run `./scripts/export-volumes.sh`. Verify three tarballs in `migration/`: roughly 140 MB / 700 KB / 600 KB.
+- [x] 8.1 Windows stack stopped (`docker compose stop`). All three containers down.
+- [x] 8.2 `./scripts/export-volumes.sh` produced 3 tarballs (compressed): qdrant_data 5.5 MB, sqlite_data 188 KB, uploads 251 KB (~6 MB total — far smaller than the 141 MB raw estimate). Note: had to add `export MSYS_NO_PATHCONV=1` to the script first to dodge Git Bash path mangling on Windows; pitfall worth remembering for future migrations.
 - [ ] 8.3 In UGOS file manager: navigate to the project working dir (e.g., `/volume1/docker/python-agent/`). Create empty subdirectories `data/sqlite/`, `data/qdrant/`, `data/uploads/`.
 - [ ] 8.4 Upload `qdrant_data.tar.gz` to `data/qdrant/`. Right-click → **Extract here**. After extraction, delete the tarball. Verify the layout is flat (e.g., `data/qdrant/collections/` exists, NOT `data/qdrant/qdrant_data/collections/`).
 - [ ] 8.5 Upload `sqlite_data.tar.gz` to `data/sqlite/`. Extract. Delete tarball. Verify `data/sqlite/knowledge_agent.db` exists.
