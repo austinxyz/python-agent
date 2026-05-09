@@ -46,13 +46,14 @@
 ```sql
 CREATE TABLE users (
   id                    TEXT PRIMARY KEY,                    -- UUID v4
-  email                 TEXT UNIQUE NOT NULL,                -- canonical identity
+  email                 TEXT UNIQUE NOT NULL,                -- ALWAYS stored lowercased + trimmed (canonical identity)
   google_sub            TEXT UNIQUE,                         -- Google's stable subject claim; NULL until linked
   password_hash         TEXT,                                -- argon2id; NULL if Google-only
   name                  TEXT,                                -- display name; from Google or self-set
   picture_url           TEXT,                                -- avatar; from Google
   role                  TEXT NOT NULL DEFAULT 'member',      -- 'admin' | 'member'
   status                TEXT NOT NULL DEFAULT 'invited',     -- 'invited' | 'active' | 'disabled'
+  session_version       INTEGER NOT NULL DEFAULT 1,          -- bumped on disable/password-reset to invalidate existing sessions
   invited_at            TEXT NOT NULL,
   invited_by            TEXT,                                -- FK users.id; NULL for INITIAL_ADMIN
   activated_at          TEXT,
@@ -65,6 +66,8 @@ CREATE INDEX idx_users_email ON users(email);
 CREATE INDEX idx_users_google_sub ON users(google_sub) WHERE google_sub IS NOT NULL;
 CREATE INDEX idx_users_status ON users(status);
 ```
+
+**Email canonicalization invariant.** Every read or write of `users.email` MUST `.strip().lower()` the input first. This applies to: bootstrap insert, admin invite, login lookup, JWT email-claim lookup, accept-invite. A user who types `Austin@Gmail.com` resolves to the same row as `austin@gmail.com`. Tests assert this round-trip explicitly.
 
 ### 4.2 `invite_tokens` table (NEW)
 
@@ -146,8 +149,13 @@ Frontend detects `window.location.protocol === 'https:' || hostname matches /^(l
 ### 5.6 Sessions
 
 - Flask signed-cookie sessions using `FLASK_SECRET_KEY` (already in env).
-- Cookie attributes: `HttpOnly=True`, `SameSite=Lax`, `Secure=True` only when request is HTTPS (auto-detect).
+- Cookie attributes: `HttpOnly=True`, `SameSite=Lax`. `Secure=<env-controlled>`:
+  - **Default `True`** (every cookie requires HTTPS to traverse — strong security).
+  - Set `SESSION_COOKIE_SECURE=false` in `.env` for NAS HTTP deployments. Cookie traverses unencrypted LAN — acceptable threat model for "single household on home wifi". This is an **explicit opt-out**, not auto-detected from `X-Forwarded-Proto` (which is easy to misconfigure when proxies aren't trustworthy).
+  - Cloud deploy keeps default. Once `nas-https` lands and NAS is on HTTPS, NAS deploy flips back to default.
+- Session contents on login: `session['user_id'] = user.id`, `session['session_version'] = user.session_version`, `session['auth_method'] = 'password' | 'google'`.
 - Session lifetime: 30 days; `permanent=True` on login. `last_login_at` updated on every successful auth.
+- **Session validation on every authenticated request:** `@require_auth` middleware loads the user by `session['user_id']`; if `user.status != 'active'` OR `user.session_version != session['session_version']` → clear cookie + 401. This is how disable / password-reset retroactively kills existing sessions despite Flask's stateless signed-cookie model: bumping `users.session_version` invalidates every cookie issued before the bump.
 - No JWT, no localStorage. All auth state lives in cookies.
 
 ## 6. Authorization
@@ -203,14 +211,22 @@ A new view at `/admin/users`, gated by `auth.user.role === 'admin'`. AppLayout a
 
 ### 7.2 Invite a new user
 
-`POST /api/admin/users` body: `{email: string, role: "member" | "admin"}`.
+`POST /api/admin/users` body: `{email: string, role: "member" | "admin", initial_password?: string}`.
+- Email is canonicalized (`.strip().lower()`) before any check.
 - Validation: email format; not already in users table.
 - Behavior:
   - Insert user with `status='invited'`, `password_hash=NULL`, `google_sub=NULL`.
   - Generate `invite_tokens` row with 7-day expiry.
+  - If `initial_password` is provided: hash it into `password_hash`, set `must_change_password=1`. Admin-shared password is temporary; user must change on first login. The invite_token is still issued (admin can pick which to share out-of-band).
   - Return `{user, invite_url}` where `invite_url = "<base_url>/accept-invite?token=<token>"`.
-  - Admin UI displays the URL with a "copy" button. Admin shares it out-of-band (WhatsApp, etc.).
-  - Optionally: admin can choose to set an initial password directly (skip the invite token flow). Body: `{email, role, initial_password: string}`. In that case `password_hash` is set + `must_change_password=1`. Admin-shared password is temporary; user must change on first login.
+  - Admin UI displays the URL with a "copy" button.
+
+**Duplicate email handling.** If a user with the canonicalized email already exists:
+- Return HTTP **409** `{error: "user already exists", existing: {id, email, status, role}}`.
+- Admin UI catches the 409 and offers context-aware actions:
+  - `existing.status == 'invited'` → "重新发送邀请？" (calls `POST /api/admin/users/:id/resend-invite`)
+  - `existing.status == 'active'` → "用户已激活，无需重复邀请" (no destructive action)
+  - `existing.status == 'disabled'` → "用户已停用，是否重新启用？" (calls `PATCH /api/admin/users/:id` with `status='active'`)
 
 ### 7.3 Update a user
 
@@ -218,13 +234,13 @@ A new view at `/admin/users`, gated by `auth.user.role === 'admin'`. AppLayout a
 - Cannot change own role (admin can't demote themselves).
 - Cannot change own status (admin can't disable themselves).
 - Cannot change role of the only admin (so the last admin can't disappear).
-- `status='disabled'` invalidates any existing sessions for that user (next request returns 401).
+- `status='disabled'` increments `session_version`; next request from any existing session of that user returns 401.
 
 ### 7.4 Reset password
 
 `POST /api/admin/users/:id/reset-password` body: `{new_password?: string}`.
 - If `new_password` not provided, server generates 12-char random one and returns it once in the response.
-- Sets `password_hash`, `must_change_password=1`, invalidates user's existing sessions.
+- Sets `password_hash`, `must_change_password=1`, increments `session_version` (kills existing cookies on next request).
 - Use case: NAS deployment where Google login isn't available, user forgot password.
 
 ### 7.5 Resend invite
@@ -273,8 +289,10 @@ If frontend is on HTTPS / localhost, the accept-invite page can ALSO offer "或�
 
 On every Flask app startup, run `auth_service.bootstrap_initial_admin()`:
 - If `users` table is empty AND `INITIAL_ADMIN_EMAIL` env var is set:
-  - Insert user `(email=INITIAL_ADMIN_EMAIL, role='admin', status='invited', invited_by=NULL)`.
-  - Generate invite token + log it to backend logs (admin sees the invite URL in the container logs once).
+  - Canonicalize the email (`.strip().lower()`).
+  - Insert user `(email=INITIAL_ADMIN_EMAIL, role='admin', invited_by=NULL)`. Two sub-paths:
+    - **If `INITIAL_ADMIN_PASSWORD` env var is also set**: hash it via argon2id, set `password_hash`, `must_change_password=1`, `status='active'`, `activated_at=now`. Admin can log in immediately with `(INITIAL_ADMIN_EMAIL, INITIAL_ADMIN_PASSWORD)` and is forced to change password on first login. **Recommended for cloud / Docker-Compose deploys** where reading container logs is awkward.
+    - **If `INITIAL_ADMIN_PASSWORD` is unset**: `status='invited'`, generate invite token (7-day expiry), log the full invite URL to backend stdout (admin reads `docker logs python-agent-api` once to find it). Admin opens URL → /accept-invite → sets password → activated. **Recommended for local dev / NAS** where reading logs is trivial.
   - Run `migrate_default_user_data(initial_admin.id)`:
     - Update all rows in `files`, `chat_sessions`, `notes`, `private_entries` where `user_id='default'` to `user_id=initial_admin.id`.
     - Update Qdrant `private` collection: scroll all points; for each point with `payload.user_id='default'`, set_payload to admin's UUID. (One-time, idempotent — re-running finds 0 such points.)
@@ -349,7 +367,11 @@ actions: {
 
 ### 10.5 AppLayout user menu
 
-Top-right of desktop sidebar / mobile header: avatar + email. Click opens menu:
+**Desktop:** the existing AppLayout sidebar footer (where `v1.0.0` lives today) becomes a user pill: avatar (32px) + email (truncated). Clicking it opens an upward-flyout menu with the items below.
+
+**Mobile:** the bottom-tab bar gains a 5th tab `我` (avatar image when active user has a `picture_url`, otherwise a `User` lucide icon). Tapping it opens a `/me` view that lists the same menu items in full-page mobile-friendly form. The "管理" admin entry lives inside this menu (admin role) — it is NOT a separate top-level tab. This keeps the bottom nav at exactly 5 items per iOS HIG (3-5 recommended) without making the layout admin-conditional.
+
+Menu items (both desktop popup and mobile `/me` view):
 - 修改密码 (if `password_hash` is set)
 - 退出登录
 - (admin only) 用户管理 — link to `/admin/users`
@@ -367,13 +389,29 @@ Top-right of desktop sidebar / mobile header: avatar + email. Click opens menu:
 
 ```bash
 # Required
-INITIAL_ADMIN_EMAIL=austin.xyz@gmail.com  # bootstraps the first admin
+INITIAL_ADMIN_EMAIL=austin.xyz@gmail.com   # bootstraps the first admin
+                                            # (canonicalized: .strip().lower())
+
+# Optional — bootstrap shortcut
+INITIAL_ADMIN_PASSWORD=<plaintext>          # if set, admin row created as
+                                            # status='active' with hashed
+                                            # password + must_change_password=1.
+                                            # If unset, admin must use the invite
+                                            # URL written to container logs on
+                                            # first startup. Recommended for cloud.
+
+# Optional — cookie security
+SESSION_COOKIE_SECURE=false                 # default true; set false ONLY for
+                                            # HTTP deploys (NAS LAN) where you
+                                            # accept that session cookies traverse
+                                            # unencrypted. Once nas-https lands,
+                                            # remove this line.
 
 # Optional — Google login
-GOOGLE_CLIENT_ID=<oauth-client-id-from-Google-Cloud-Console>  # if unset, GSI button hidden everywhere
+GOOGLE_CLIENT_ID=<oauth-client-id>          # if unset, GSI button hidden everywhere
 
 # Already in env
-FLASK_SECRET_KEY=<32-byte secret>          # signs session cookies; must be stable across restarts
+FLASK_SECRET_KEY=<32-byte secret>           # signs session cookies; must be stable across restarts
 ```
 
 No `AUTH_MODE` env var. Auth is always "on" — there is no single-user fallback. Email+password works everywhere; Google is opt-in (frontend self-detects HTTPS/localhost availability).
@@ -382,7 +420,7 @@ No `AUTH_MODE` env var. Auth is always "on" — there is no single-user fallback
 
 - Passwords hashed with argon2id, default parameters from `argon2-cffi`. No plaintext anywhere in DB or logs.
 - Sessions are HttpOnly cookies signed with `FLASK_SECRET_KEY`. `Secure=True` automatically when request is HTTPS.
-- Rate limit on `POST /api/auth/login`: 5 fails per email per 15 min → 429.
+- Rate limit on `POST /api/auth/login` AND `POST /api/auth/login/google`: 5 fails per email per 15 min → 429. Counter is in-memory (`collections.defaultdict` keyed by lowercased email + window timestamp). Acceptable for V1 single-instance deploys; cloud / multi-instance V2 will swap in Redis. Counter resets on successful login.
 - CSRF: `SameSite=Lax` on session cookie. Mutating endpoints rely on this. (Flask-WTF CSRF tokens are NOT introduced in V1 — `Lax` is sufficient for our threat model.)
 - Invite tokens: 32-byte URL-safe random; expire in 7 days; one-time use.
 - Admin actions (invite, role change, status change, reset password, delete) log to backend logger with admin's email + target user's email + action.
@@ -392,13 +430,20 @@ No `AUTH_MODE` env var. Auth is always "on" — there is no single-user fallback
 
 ### 13.1 Backend (pytest)
 
-- `test_auth_password_login.py`: happy path; wrong password → 401; non-existent email → 401 (same as wrong); disabled user → 401; rate limit at 5 fails → 429.
-- `test_auth_google_login.py`: valid token + invited user → activation; valid token + active user with matching `google_sub` → login + name/picture refresh; valid token + active user with mismatched `google_sub` → 403; valid token + email not in users → 403; invalid/expired/wrong-audience token → 401.
+- `test_auth_password_login.py`: happy path; wrong password → 401; non-existent email → 401 (same as wrong); disabled user → 401; rate limit at 5 fails → 429; **mixed-case email `Austin@Gmail.com` resolves to same user as `austin@gmail.com`**.
+- `test_auth_google_login.py`: valid token + invited user → activation; valid token + active user with matching `google_sub` → login + name/picture refresh; valid token + active user with mismatched `google_sub` → 403; valid token + email not in users → 403; invalid/expired/wrong-audience token → 401; **rate limit applies to Google endpoint too (5/email/15min)**.
 - `test_auth_invite_flow.py`: admin invites → token issued; user accepts → password set + activated; expired token → 410; double-use → 410.
 - `test_auth_change_password.py`: must verify old; on `must_change_password=1` user, skip old verification; updates `password_set_at`.
-- `test_admin_users.py`: list, invite, role change, status change, reset password, delete; admin can't demote/disable/delete self; can't delete the only admin.
-- `test_bootstrap_migration.py`: first startup with empty users + `INITIAL_ADMIN_EMAIL` set → admin row + invite token; existing `user_id='default'` rows in all 4 tables get rewritten to admin UUID; Qdrant `private` payload `user_id` rewritten; idempotent (second run is a no-op).
-- `test_route_guards.py`: every existing private/chat/ingest/files/wiki route returns 401 without session; with session, scopes by `g.user.id`.
+- `test_session_invalidation.py` (NEW for session_version): user logs in (cookie has session_version=1); admin disables → next request 401; admin re-enables (session_version still 2 from disable) → original cookie still 401; user logs in fresh → new cookie works. Also: admin resets password → bumps session_version → existing cookies 401.
+- `test_admin_users.py`: list, invite, role change, status change, reset password, delete; admin can't demote/disable/delete self; can't delete the only admin; **duplicate-email POST returns 409 with `existing.status` field; mixed-case duplicate detected (`Austin@Gmail.com` collides with stored `austin@gmail.com`)**.
+- `test_bootstrap_migration.py`: 
+  - **path A (`INITIAL_ADMIN_PASSWORD` set)**: first startup creates admin with `status='active'`, `password_hash` set, `must_change_password=1`. Admin can log in immediately with the env password. Second startup is a no-op.
+  - **path B (`INITIAL_ADMIN_PASSWORD` unset)**: first startup creates admin with `status='invited'` + invite token. Token URL is logged to stdout. Second startup is a no-op (token NOT regenerated even if first invite has expired — admin uses resend-invite for that).
+  - existing `user_id='default'` rows in all 4 tables get rewritten to admin UUID.
+  - Qdrant `private` payload `user_id` rewritten.
+  - idempotent (second run finds 0 default rows; no-op).
+- `test_email_canonicalization.py` (NEW): all writes (bootstrap, invite, accept-invite) lowercase + trim; all reads canonicalize input first; `' Austin@Gmail.com '` and `'austin@gmail.com'` resolve to same row in every code path.
+- `test_route_guards.py`: every existing private/chat/ingest/files/wiki route returns 401 without session; with session, scopes by `g.user.id`; session with stale `session_version` → 401 + cookie cleared.
 
 ### 13.2 Frontend (vitest)
 
@@ -425,7 +470,10 @@ No `AUTH_MODE` env var. Auth is always "on" — there is no single-user fallback
 8. AppLayout user menu (avatar + logout).
 9. Test pass: backend + frontend + E2E green.
 10. Live test on local dev with two test users: invite flow, login, isolation of private data.
-11. Deploy to NAS: existing single-admin (you) logs in via email+password since NAS has no HTTPS. Verify your data is intact.
+11. Deploy to NAS with `.env` containing:
+    - `INITIAL_ADMIN_EMAIL` + `INITIAL_ADMIN_PASSWORD` (bootstrap shortcut)
+    - `SESSION_COOKIE_SECURE=false` (until `nas-https` lands)
+    Admin logs in with `(email, INITIAL_ADMIN_PASSWORD)` → forced to `/change-password` → sets real password → verify all 85 files / 30 entries / 14 notes / 18 messages are visible under their account. Verify a second invited member sees an empty `/private` (isolation works). Document the `SESSION_COOKIE_SECURE=false` debt in dev log so it's removed after `nas-https`.
 12. Future: HTTPS change → switch to using Google login on NAS too.
 
 ## 15. Risks
@@ -436,6 +484,7 @@ No `AUTH_MODE` env var. Auth is always "on" — there is no single-user fallback
 - **R-04 — Invite token interception:** a leaked URL grants the holder the ability to set a password. Mitigation: 7-day expiry; invalidation when used; admin can revoke via "resend invite" which marks old token as used.
 - **R-05 — Same email on multiple Google accounts:** unlikely (Google enforces email uniqueness per account) but `google_sub` mismatch protects against linking-then-takeover.
 - **R-06 — argon2 adds backend startup time:** ~50ms per login is acceptable. argon2 itself adds minimal overhead at idle.
+- **R-07 — Concurrent invite to same email races UNIQUE constraint:** if two admins (or admin + script) try to invite the same email simultaneously, one INSERT wins, the other gets a 409 from §7.2's duplicate-handling logic. SQLite's UNIQUE constraint is the source of truth; no extra locking needed. Tests assert the second concurrent request gets 409 with status info, not a 500.
 
 ## 16. Acceptance criteria
 
@@ -458,6 +507,7 @@ The change is "done" when:
 - **Q-02 — username vs email-as-username.** This doc commits to email-as-identity. Future change can add `username` column if friction emerges.
 - **Q-03 — session lifetime tuning.** 30 days is a guess. Watch for complaints; tune later.
 - **Q-04 — admin lockout recovery on cloud (no docker exec).** Future cloud deploy needs an alternative to the CLI reset script. Maybe a "secret recovery code" printed on first admin bootstrap.
+- **Q-05 — Google account email change for an active user.** Google's `sub` claim is stable but the `email` claim can change if the user renames their Gmail. Current login lookup is by email → user with stale email-to-DB mapping fails Google login with 403 "not invited". V1 workaround: admin manually updates the user's email via `PATCH /api/admin/users/:id` (endpoint NOT in V1 scope — admin can `disable + delete + re-invite` to recover). V2 may add `email` field to admin PATCH and/or fall back to `google_sub` lookup before failing. Documented as known limitation; rare in practice.
 
 ---
 
