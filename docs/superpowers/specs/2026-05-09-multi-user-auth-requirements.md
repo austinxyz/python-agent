@@ -4,7 +4,14 @@
 **Change name:** `multi-user-auth`
 **Scope:** Replace single-user (`user_id="default"`) hardcode with proper multi-user authentication and authorization. Two coexisting login methods (email+password universal; Google Sign-In additional when HTTPS / localhost). Admin-managed allowlist via DB-backed UI.
 **Status:** Requirements only. Implementation will follow as an OpenSpec change.
-**UI mocks:** [mocks/2026-05-09-multi-user-auth-mocks.html](mocks/2026-05-09-multi-user-auth-mocks.html) — login flow (sidebar always visible, growing-style user pill at top, login form in main pane, default landing /chat) + mobile bottom-tab "我" 5th tab.
+**UI mocks:** [mocks/2026-05-09-multi-user-auth-mocks.html](mocks/2026-05-09-multi-user-auth-mocks.html) — 4 sections: (1) login flow with growing-style sidebar + user pill, (2) AdminUsersView with table + invite modal + delete confirmation, (3) accept-invite full flow including 3 error states, (4) change-password form. Mobile equivalents included. All in self-contained HTML — open directly in browser, no server.
+
+**Implementation split:** This requirement is large (~950 lines). Recommended split into **2 OpenSpec changes**:
+
+- **`multi-user-auth-core`** (~700 lines, ship first): backend auth + bootstrap + LoginView + AcceptInviteView + ChangePasswordView + router guard + AppLayout user pill. Admin invites via CLI in this phase (`docker exec ... python -m app.cli.invite_user <email> <role>`).
+- **`multi-user-auth-admin-ui`** (~250 lines, ship second after core is validated): `/api/admin/users` CRUD + AdminUsersView + 5th sidebar nav item.
+
+Rationale: core change is intrinsically end-to-end (login UI requires auth backend); admin UI is a pure UX upgrade over a working CLI. Splitting lets you validate the auth model with 1-2 family members before investing in admin UX.
 
 ---
 
