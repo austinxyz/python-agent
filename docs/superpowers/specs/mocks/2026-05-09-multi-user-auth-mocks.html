@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="utf-8">
+  <title>multi-user-auth UI Mocks (2026-05-09)</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+      background: #f5f5f7;
+      color: #1d1d1f;
+      line-height: 1.5;
+      padding: 2rem;
+      max-width: 1280px;
+      margin: 0 auto;
+    }
+    @media (prefers-color-scheme: dark) {
+      body { background: #1d1d1f; color: #f5f5f7; }
+    }
+    /* Doc header */
+    .doc-header {
+      border-bottom: 1px solid #d1d1d6;
+      padding-bottom: 1rem;
+      margin-bottom: 2rem;
+    }
+    .doc-header h1 { font-size: 1.5rem; margin-bottom: 0.25rem; }
+    .doc-header .meta { font-size: 0.85rem; color: #86868b; }
+    .doc-header .meta a { color: inherit; }
+    /* Typography */
+    h2 { font-size: 1.5rem; font-weight: 600; margin: 2rem 0 0.5rem; }
+    h3 { font-size: 1.1rem; font-weight: 600; margin-bottom: 0.25rem; }
+    .subtitle { color: #86868b; margin-bottom: 1.5rem; }
+    .section { margin-bottom: 2rem; }
+    .label { font-size: 0.7rem; color: #86868b; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.5rem; }
+    /* Mockup container */
+    .mockup {
+      background: #ffffff;
+      border: 1px solid #d1d1d6;
+      border-radius: 12px;
+      overflow: hidden;
+      margin-bottom: 1.5rem;
+    }
+    .mockup-header {
+      background: #e5e5e7;
+      padding: 0.5rem 1rem;
+      font-size: 0.75rem;
+      color: #86868b;
+      border-bottom: 1px solid #d1d1d6;
+    }
+    .mockup-body { padding: 1.5rem; }
+    /* Split view */
+    .split { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+    @media (max-width: 700px) { .split { grid-template-columns: 1fr; } }
+    /* Mock helpers */
+    .mock-input {
+      background: #ffffff;
+      border: 1px solid #d1d1d6;
+      border-radius: 6px;
+      padding: 0.5rem;
+      width: 100%;
+    }
+    /* Code inline */
+    code {
+      background: #f0eeec;
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-size: 12px;
+      font-family: 'SF Mono', Monaco, Consolas, monospace;
+    }
+    @media (prefers-color-scheme: dark) {
+      code { background: #3d3d3f; }
+      .mockup { background: #2d2d2f; border-color: #424245; }
+      .mockup-header { background: #3d3d3f; border-color: #424245; color: #aeaeb2; }
+      .mock-input { background: #2d2d2f; border-color: #424245; color: #f5f5f7; }
+    }
+  </style>
+</head>
+<body>
+  <div class="doc-header">
+    <h1>multi-user-auth — UI mocks (agreed 2026-05-09)</h1>
+    <div class="meta">
+      Static reference for the OpenSpec change <code>multi-user-auth</code>.
+      Source brainstorm:
+      <a href="../2026-05-09-multi-user-auth-requirements.md">requirements doc</a>
+      · This file is committed alongside.
+    </div>
+  </div>
+
+<h2>登录流程 — growing 风格</h2>
+<p class="subtitle">Sidebar 永远可见。User pill 在顶部，未登录时是"登录"按钮，已登录时是 avatar+email+退出。Login 表单在主区域。默认进 /chat。</p>
+
+<div class="section">
+  <div class="label">Desktop：未登录 → /chat 重定向 → /login（sidebar 可见，表单在右）</div>
+</div>
+
+<div class="mockup">
+  <div class="mockup-header">/login on desktop — 1280×720</div>
+  <div class="mockup-body" style="background:#fff; padding:0; min-height:420px; display:flex">
+
+    <aside style="width:224px; background:#fafaf9; border-right:1px solid #e5e3df; display:flex; flex-direction:column">
+      <div style="padding:12px; border-bottom:1px solid #e5e3df">
+        <div style="display:flex; align-items:center; gap:8px; padding:8px; background:#fff; border:1px solid #e5e3df; border-radius:8px">
+          <div style="width:28px; height:28px; border-radius:50%; background:#e5e3df; color:#787671; font-size:12px; display:flex; align-items:center; justify-content:center">?</div>
+          <div style="flex:1; min-width:0">
+            <div style="font-size:11px; color:#5d5b54">未登录</div>
+          </div>
+          <button style="background:#5645d4; color:#fff; border:none; padding:4px 10px; border-radius:4px; font-size:11px; font-weight:500; cursor:pointer">登录</button>
+        </div>
+      </div>
+
+      <div style="padding:12px; border-bottom:1px solid #e5e3df; display:flex; align-items:center; gap:8px">
+        <div style="width:28px; height:28px; border-radius:6px; background:#0a1530; color:#fff; display:flex; align-items:center; justify-content:center; font-weight:600; font-size:12px">知</div>
+        <span style="font-size:13px; font-weight:600; color:#1a1a1a">知识 Agent</span>
+      </div>
+
+      <nav style="flex:1; padding:8px; display:flex; flex-direction:column; gap:2px">
+        <div style="padding:8px 12px; font-size:13px; color:#5d5b54; border-radius:5px">📚 知识库</div>
+        <div style="padding:8px 12px; font-size:13px; color:#5d5b54; border-radius:5px">⬆ 摄入</div>
+        <div style="padding:8px 12px; font-size:13px; background:#e6e0f5; color:#391c57; border-radius:5px">💬 对话 <span style="font-size:9px; color:#787671">默认</span></div>
+        <div style="padding:8px 12px; font-size:13px; color:#5d5b54; border-radius:5px">🔒 私有数据</div>
+      </nav>
+
+      <div style="padding:12px; border-top:1px solid #e5e3df; font-size:10px; color:#a4a097">v1.0.0</div>
+    </aside>
+
+    <main style="flex:1; background:#f6f5f4; display:flex; align-items:center; justify-content:center; padding:24px">
+      <div style="width:100%; max-width:380px; background:#fff; border:1px solid #e5e3df; border-radius:12px; padding:32px; box-shadow:0 1px 3px rgba(0,0,0,0.04)">
+        <div style="text-align:center; margin-bottom:24px">
+          <div style="display:inline-flex; width:52px; height:52px; border-radius:12px; background:#0a1530; color:#fff; align-items:center; justify-content:center; font-size:22px; font-weight:600">知</div>
+          <h2 style="font-size:20px; font-weight:600; color:#1a1a1a; margin:14px 0 4px">登录</h2>
+          <p style="font-size:13px; color:#787671">使用邮箱密码 或 Google 账号</p>
+        </div>
+
+        <div style="display:flex; flex-direction:column; gap:12px">
+          <div>
+            <label style="display:block; font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:0.08em; color:#787671; margin-bottom:4px">邮箱</label>
+            <input style="width:100%; height:38px; padding:0 12px; border:1px solid #c8c4be; border-radius:6px; font-size:13px" placeholder="austin.xyz@gmail.com"/>
+          </div>
+          <div>
+            <label style="display:block; font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:0.08em; color:#787671; margin-bottom:4px">密码</label>
+            <input type="password" style="width:100%; height:38px; padding:0 12px; border:1px solid #c8c4be; border-radius:6px; font-size:13px" placeholder="••••••••"/>
+          </div>
+          <button style="height:40px; background:#5645d4; color:#fff; border:none; border-radius:6px; font-size:13px; font-weight:500; cursor:pointer; margin-top:4px">登录</button>
+
+          <div style="display:flex; align-items:center; gap:10px; margin:6px 0; color:#a4a097; font-size:11px">
+            <div style="flex:1; height:1px; background:#e5e3df"></div>
+            <span>或</span>
+            <div style="flex:1; height:1px; background:#e5e3df"></div>
+          </div>
+
+          <button style="height:40px; background:#fff; color:#37352f; border:1px solid #c8c4be; border-radius:6px; font-size:13px; font-weight:500; display:flex; align-items:center; justify-content:center; gap:8px; cursor:pointer">
+            <svg width="16" height="16" viewBox="0 0 18 18"><path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.874 2.684-6.615z" fill="#4285F4"/><path d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332C2.438 15.983 5.482 18 9 18z" fill="#34A853"/><path d="M3.964 10.71c-.18-.54-.282-1.117-.282-1.71s.102-1.17.282-1.71V4.958H.957C.347 6.173 0 7.548 0 9s.348 2.827.957 4.042l3.007-2.332z" fill="#FBBC05"/><path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0 5.482 0 2.438 2.017.957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z" fill="#EA4335"/></svg>
+            Sign in with Google
+          </button>
+
+          <p style="font-size:11px; color:#a4a097; text-align:center; margin-top:8px">没账号？请管理员发邀请链接</p>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<div class="section">
+  <div class="label">Desktop：登录后 → /chat（user pill 切换为头像+邮箱+退出）</div>
+</div>
+
+<div class="mockup">
+  <div class="mockup-header">/chat after login — sidebar 同样布局，user pill 变了</div>
+  <div class="mockup-body" style="background:#fff; padding:0; min-height:280px; display:flex">
+
+    <aside style="width:224px; background:#fafaf9; border-right:1px solid #e5e3df; display:flex; flex-direction:column">
+      <div style="padding:12px; border-bottom:1px solid #e5e3df">
+        <div style="display:flex; align-items:center; gap:8px; padding:8px; background:#fff; border:1px solid #e5e3df; border-radius:8px">
+          <div style="width:28px; height:28px; border-radius:50%; background:#5645d4; color:#fff; font-size:12px; display:flex; align-items:center; justify-content:center; font-weight:600">A</div>
+          <div style="flex:1; min-width:0">
+            <div style="font-size:11px; font-weight:500; color:#1a1a1a">Austin <span style="background:#e6e0f5; color:#391c57; font-size:8px; padding:1px 4px; border-radius:3px; margin-left:2px">admin</span></div>
+            <div style="font-size:10px; color:#787671; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">austin.xyz@gmail.com</div>
+          </div>
+          <button title="退出" style="background:transparent; border:none; padding:4px 6px; cursor:pointer; color:#787671">⏻</button>
+        </div>
+      </div>
+
+      <div style="padding:12px; border-bottom:1px solid #e5e3df; display:flex; align-items:center; gap:8px">
+        <div style="width:28px; height:28px; border-radius:6px; background:#0a1530; color:#fff; display:flex; align-items:center; justify-content:center; font-weight:600; font-size:12px">知</div>
+        <span style="font-size:13px; font-weight:600; color:#1a1a1a">知识 Agent</span>
+      </div>
+
+      <nav style="flex:1; padding:8px; display:flex; flex-direction:column; gap:2px">
+        <div style="padding:8px 12px; font-size:13px; color:#5d5b54; border-radius:5px">📚 知识库</div>
+        <div style="padding:8px 12px; font-size:13px; color:#5d5b54; border-radius:5px">⬆ 摄入</div>
+        <div style="padding:8px 12px; font-size:13px; background:#e6e0f5; color:#391c57; border-radius:5px; font-weight:500">💬 对话</div>
+        <div style="padding:8px 12px; font-size:13px; color:#5d5b54; border-radius:5px">🔒 私有数据</div>
+        <div style="padding:8px 12px; font-size:13px; color:#5d5b54; border-radius:5px">⚙ 用户管理 <span style="font-size:9px; color:#a4a097">admin</span></div>
+      </nav>
+    </aside>
+
+    <main style="flex:1; padding:16px; font-size:12px; color:#37352f">
+      <div style="background:#0a1530; color:#fff; padding:12px; margin:-16px -16px 14px; font-size:14px">智能对话</div>
+      💬 你: FBAR 怎么处理？<br/>
+      <span style="color:#787671">⏳ 思考中…</span><br/>
+      <span style="font-size:10px; color:#a4a097">（默认登录后落点）</span>
+    </main>
+  </div>
+</div>
+
+<div class="section">
+  <div class="label">Mobile（小屏 768- 一致逻辑：bottom-tab 替代 sidebar，"我" tab 处理身份）</div>
+</div>
+
+<div class="split">
+  <div class="mockup">
+    <div class="mockup-header">未登录 mobile：/login 全屏（无 bottom-tab）</div>
+    <div class="mockup-body" style="background:#f6f5f4; padding:0; min-height:300px">
+      <div style="background:#0a1530; color:#fff; padding:14px; font-size:13px">登录</div>
+      <div style="padding:18px; display:flex; flex-direction:column; gap:8px">
+        <input style="height:32px; padding:0 8px; border:1px solid #c8c4be; border-radius:5px; font-size:11px" placeholder="邮箱"/>
+        <input type="password" style="height:32px; padding:0 8px; border:1px solid #c8c4be; border-radius:5px; font-size:11px" placeholder="密码"/>
+        <button style="height:32px; background:#5645d4; color:#fff; border:none; border-radius:5px; font-size:11px">登录</button>
+        <div style="display:flex; align-items:center; gap:6px; color:#a4a097; font-size:10px; margin:2px 0"><div style="flex:1;height:1px;background:#e5e3df"></div>或<div style="flex:1;height:1px;background:#e5e3df"></div></div>
+        <button style="height:32px; background:#fff; border:1px solid #c8c4be; border-radius:5px; font-size:10px">G  Sign in with Google</button>
+      </div>
+      <div style="font-size:9px; color:#5d5b54; padding:0 18px">无 bottom-tab 干扰，专注输入</div>
+    </div>
+  </div>
+  <div class="mockup">
+    <div class="mockup-header">已登录 mobile：bottom-tab + 我</div>
+    <div class="mockup-body" style="background:#fff; padding:0; min-height:300px; position:relative">
+      <div style="background:#0a1530; color:#fff; padding:12px; font-size:12px">智能对话</div>
+      <div style="padding:14px; font-size:11px; color:#37352f">默认进 /chat。点 [我] 看身份/退出。</div>
+      <div style="position:absolute; bottom:0; left:0; right:0; height:50px; background:#fff; border-top:1px solid #e5e3df; display:grid; grid-template-columns:repeat(5,1fr); align-items:center; justify-items:center; font-size:9px; color:#787671">
+        <div>📚<br/>知识库</div>
+        <div>⬆<br/>摄入</div>
+        <div style="background:#e6e0f5; color:#391c57; height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; width:100%">💬<br/>对话</div>
+        <div>🔒<br/>私有</div>
+        <div style="display:flex; flex-direction:column; align-items:center; gap:2px"><div style="width:16px; height:16px; border-radius:50%; background:#5645d4; color:#fff; font-size:9px; display:flex; align-items:center; justify-content:center; font-weight:600">A</div>我</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="label">行为细节</div>
+</div>
+
+<div style="background:#fafaf9; border:1px solid #e5e3df; padding:14px; border-radius:6px; font-size:13px; color:#37352f; line-height:1.7">
+  <strong>路由守卫：</strong> 未登录 + 访问 /chat /wiki /ingest /private → 自动跳 /login（保留 redirect=...）<br/>
+  <strong>默认登录后落点：</strong> /chat（不是当前的 /wiki）<br/>
+  <strong>未登录状态 sidebar nav：</strong> 灰色显示，点击触发 router guard 跳 /login<br/>
+  <strong>已登录退出：</strong> 点 ⏻ 按钮 → 调 /api/auth/logout → 跳 /login<br/>
+  <strong>Mobile 不复用 sidebar 模式：</strong> 已登录用 bottom-tab，未登录 /login 全屏。这是因为 mobile 屏窄；growing 是 web-only 没这个约束。
+</div>
+
+</body>
+</html>

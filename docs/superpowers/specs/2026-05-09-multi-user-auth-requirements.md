@@ -4,6 +4,7 @@
 **Change name:** `multi-user-auth`
 **Scope:** Replace single-user (`user_id="default"`) hardcode with proper multi-user authentication and authorization. Two coexisting login methods (email+password universal; Google Sign-In additional when HTTPS / localhost). Admin-managed allowlist via DB-backed UI.
 **Status:** Requirements only. Implementation will follow as an OpenSpec change.
+**UI mocks:** [mocks/2026-05-09-multi-user-auth-mocks.html](mocks/2026-05-09-multi-user-auth-mocks.html) — login flow (sidebar always visible, growing-style user pill at top, login form in main pane, default landing /chat) + mobile bottom-tab "我" 5th tab.
 
 ---
 
