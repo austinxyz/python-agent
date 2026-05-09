@@ -1,7 +1,7 @@
 ## ADDED Requirements
 
 ### Requirement: NAS production compose file uses image refs and bind mounts
-The repository SHALL include `docker-compose.prod.yml` at the project root, distinct from `docker-compose.yml`. The prod file MUST use `image:` refs (no `build:` sections), MUST bind-mount `./data/sqlite`, `./data/qdrant`, and `./data/uploads` into the api and qdrant containers, and MUST publish host ports `8910` (frontend), `8911` (api), `8912` (qdrant). The file MUST NOT declare a top-level `volumes:` block. Container names MUST be set explicitly (`python-agent-frontend`, `python-agent-api`, `python-agent-qdrant`) so UGOS Docker Project UI lists them clearly. All three services MUST set `restart: unless-stopped`.
+The repository SHALL include `docker-compose.prod.yml` at the project root, distinct from `docker-compose.yml`. The prod file MUST use `image:` refs (no `build:` sections), MUST bind-mount `./data/sqlite`, `./data/qdrant`, and `./data/uploads` into the api and qdrant containers, and MUST publish host ports `8910` (frontend) and `8911` (api). The qdrant service MUST NOT publish any host port (v1.9 has no auth; binding it to the LAN would expose the entire vector store). The file MUST NOT declare a top-level `volumes:` block. Container names MUST be set explicitly (`python-agent-frontend`, `python-agent-api`, `python-agent-qdrant`) so UGOS Docker Project UI lists them clearly. All three services MUST set `restart: unless-stopped`.
 
 #### Scenario: NAS compose pulls images, doesn't build
 - **WHEN** `docker compose -f docker-compose.prod.yml pull` is run on a fresh NAS
@@ -13,7 +13,11 @@ The repository SHALL include `docker-compose.prod.yml` at the project root, dist
 
 #### Scenario: NAS host ports do not collide with default UGOS occupants
 - **WHEN** the prod stack is started on UGREEN with default UGOS services running
-- **THEN** ports 8910/8911/8912 are unused before bind, and the stack starts without "address already in use" errors
+- **THEN** ports 8910 and 8911 are unused before bind, and the stack starts without "address already in use" errors
+
+#### Scenario: Qdrant is not reachable from the LAN
+- **WHEN** the prod stack is running and a LAN device sends `curl http://10.0.0.20:8912/collections`
+- **THEN** the connection is refused (no host listener) AND the api at 10.0.0.20:8911 still successfully queries qdrant via the docker internal network
 
 ### Requirement: Build script publishes amd64 images to Docker Hub
 The repository SHALL include `scripts/build-and-push.sh` that builds linux/amd64 images for the api and frontend services and pushes them to Docker Hub under `xuaustin/python-agent-api` and `xuaustin/python-agent-frontend`. Each push MUST tag both `:latest` and `:vYYYYMMDD-<short-sha>` where the date is UTC and the sha is the current `git rev-parse --short HEAD`. The script MUST use `docker buildx` with the `multiarch` builder (auto-created if absent) and `--platform linux/amd64` (single arch). The script MUST exit non-zero on any build or push failure (`set -e`).

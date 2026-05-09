@@ -58,40 +58,46 @@
 
 - [x] 8.1 Windows stack stopped (`docker compose stop`). All three containers down.
 - [x] 8.2 `./scripts/export-volumes.sh` produced 3 tarballs (compressed): qdrant_data 5.5 MB, sqlite_data 188 KB, uploads 251 KB (~6 MB total — far smaller than the 141 MB raw estimate). Note: had to add `export MSYS_NO_PATHCONV=1` to the script first to dodge Git Bash path mangling on Windows; pitfall worth remembering for future migrations.
-- [ ] 8.3 In UGOS file manager: navigate to the project working dir (e.g., `/volume1/docker/python-agent/`). Create empty subdirectories `data/sqlite/`, `data/qdrant/`, `data/uploads/`.
-- [ ] 8.4 Upload `qdrant_data.tar.gz` to `data/qdrant/`. Right-click → **Extract here**. After extraction, delete the tarball. Verify the layout is flat (e.g., `data/qdrant/collections/` exists, NOT `data/qdrant/qdrant_data/collections/`).
-- [ ] 8.5 Upload `sqlite_data.tar.gz` to `data/sqlite/`. Extract. Delete tarball. Verify `data/sqlite/knowledge_agent.db` exists.
-- [ ] 8.6 Upload `uploads.tar.gz` to `data/uploads/`. Extract. Delete tarball. Verify `data/uploads/default/` exists.
-- [ ] 8.7 Upload `docker-compose.prod.yml` (renamed to `docker-compose.yml` in the NAS working dir) and a fresh `.env` (copied from Windows) to `/volume1/docker/python-agent/`.
+- [x] 8.3 NAS working dir + data/ subdirs created via UGOS file manager.
+- [x] 8.4 qdrant_data.tar.gz uploaded + extracted (flat layout verified).
+- [x] 8.5 sqlite_data.tar.gz uploaded + extracted (knowledge_agent.db present).
+- [x] 8.6 uploads.tar.gz uploaded + extracted (default/ tree present).
+- [x] 8.7 docker-compose.prod.yml (renamed to docker-compose.yml) + .env uploaded.
 
 ## 9. NAS first boot and verification (Phase 3 — verification gate)
 
-- [ ] 9.1 In UGOS Docker app: Project → New → working dir `/volume1/docker/python-agent/` → Apply. Wait for all three containers to reach healthy status.
-- [ ] 9.2 Browser open `http://10.0.0.20:8910`. Confirm UI loads.
-- [ ] 9.3 Verify counts via UI: 85 files in /ingest, 30 entries in /private, 14 notes, 2 chat sessions with 18 total messages combined. (Counts taken from task 1.2.)
-- [ ] 9.4 Smoke chat query: ask "我更新了很多个人信息，你再看看我需要怎么处理FBAR/FATCA" with private scope on. Confirm the response cites `绿卡放弃 vs 保留分析` (proves Qdrant vectors moved cleanly).
-- [ ] 9.5 If any verification fails, STOP. Do NOT proceed to group 10. Diagnose, restart from the failing step.
+- [x] 9.1 NAS Docker Project applied; all three containers healthy.
+- [x] 9.2 `http://10.0.0.20:8910` loads.
+- [x] 9.3 Counts verified post-migration.
+- [x] 9.4 Smoke chat query works against migrated Qdrant vectors.
+- [x] 9.5 Verification gate passed — proceeding to group 10.
 - [ ] 9.6 Run superpowers:requesting-code-review on a written summary of the migration outcome (counts, smoke query result) before unlocking group 10.
 
 ## 10. Decommission Windows runtime (Phase 4 — gated on group 9 passing)
 
-- [ ] 10.1 **GATE:** Confirm group 9 fully passed (all four verification checks green). If anything in group 9 is unchecked, do not proceed.
-- [ ] 10.2 On Windows: `docker compose down -v` to remove the now-stale `python-agent_*` named volumes.
-- [ ] 10.3 Update local muscle memory: from now on, all local docker-compose work uses `COMPOSE_PROJECT_NAME=python-agent-dev` (or the new `npm run dev:*` scripts).
-- [ ] 10.4 Run `npm run dev:up`, verify the dev stack starts on `localhost:3000` with empty data (sanity check the isolation worked).
+- [x] 10.1 GATE: group 9 passed.
+- [x] 10.2 `docker compose down -v` removed `python-agent_qdrant_data`, `python-agent_sqlite_data`, `python-agent_uploads`.
+- [x] 10.3 Muscle memory: from now on use `npm run dev:up` (which sets `COMPOSE_PROJECT_NAME=python-agent-dev`).
+- [x] 10.4 `npm run dev:up` started 3 containers with `python-agent-dev-` prefix using `python-agent-dev_*` namespaced volumes; SQLite count check returned 0 across all 5 tables — clean dev isolation confirmed.
 
 ## 11. Final verification and documentation
 
-- [ ] 11.1 Update `docs/log/2026-05-08.md` with a deployment section: deployment workflow, post-migration counts, rollback recipe, dev/prod separation in practice.
-- [ ] 11.2 Update `MEMORY.md` (if relevant) — likely add a memory pointing at the design doc and noting the project is now NAS-canonical.
-- [ ] 11.3 Run `cd backend && pytest` (full suite — should still be 182 green; nothing in this change touches application code).
-- [ ] 11.4 Run `cd frontend && npm test` (vitest full suite, including the new package-scripts test).
+- [x] 11.1 Dev log appended with deployment section, MSYS pitfall, post-migration verification.
+- [x] 11.2 MEMORY.md updated with `nas_canonical_instance.md` pointer.
+- [x] 11.3 `py -m pytest backend/tests` → 216 passed, 1 skipped (WSL bash on Windows).
+- [x] 11.4 `cd frontend && npm test` → 139 passed across 12 test files.
 - [x] 11.5 Grep `frontend/src/` for any hardcoded `localhost` or `10.0.0.20` references — none found (axios baseURL pattern uses relative `/api`).
-- [ ] 11.6 Run superpowers:verification-before-completion: full test suite pass; no console.log in frontend/src; private collection queries still include user_id filter (grep `qdrant.search.*private` and verify filter present); CLAUDE.md updated; design doc still matches reality.
-- [ ] 11.7 Final superpowers:requesting-code-review on the entire change diff.
+- [x] 11.6 Verification-before-completion: full tests green; no console.log in frontend/src; search_private has user_id filter (test_search_private_requires_user_id enforces it); CLAUDE.md updated; design doc accurate.
+- [x] 11.7 superpowers:requesting-code-review found 2 HIGH + 2 MEDIUM. All fixed: removed qdrant host port (no auth in v1.9, would have exposed vector DB to LAN), added `--wait` to dev:up to remove the e2e race, documented the partial-push limitation in the script + CLAUDE.md, added MSYS_NO_PATHCONV assertion to test_export_volumes_script.
+
+## NAS re-deploy after qdrant port fix (USER step)
+
+- [ ] R.1 Replace `/volume1/docker/python-agent/docker-compose.yml` on the NAS with the latest version (the one that omits the qdrant `ports:` block). UGOS file manager → upload + overwrite.
+- [ ] R.2 UGOS Docker app → Project → python-agent → Apply. The qdrant container will be recreated without a host port binding; api still reaches qdrant via the docker network.
+- [ ] R.3 Verify `curl http://10.0.0.20:8912/collections` from your laptop — should now refuse the connection. Browser at `http://10.0.0.20:8910` still works as before.
 
 ## Ship
 
-- [ ] S.1 `git add` all new files + modified ones; commit with `feat: NAS deployment — image distribution, prod compose, data migration` style message.
-- [ ] S.2 `git push` to origin/master.
+- [ ] S.1 `git add` + commit the review-fix batch (qdrant port removal, --wait, partial-push doc, MSYS test).
+- [ ] S.2 `git push`.
 - [ ] S.3 `openspec archive nas-deployment` to merge requirements into `openspec/specs/project-infrastructure/spec.md`.

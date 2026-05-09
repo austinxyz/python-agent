@@ -4,6 +4,13 @@
 # Each push tags both :latest and :vYYYYMMDD-<short-sha>.
 #
 # Prerequisites: `docker login` once before running.
+#
+# KNOWN LIMITATION: pushes are sequential (api first, frontend second). If the
+# frontend build fails after api has already pushed, the registry's :latest
+# tags become mismatched (new api, old frontend). Mitigation: re-run the
+# script after fixing the failure — both images get pushed again with the
+# same date+sha tag, restoring atomicity from the next NAS Pull onward.
+#
 # See openspec/changes/nas-deployment/design.md §2 for rationale.
 
 set -e

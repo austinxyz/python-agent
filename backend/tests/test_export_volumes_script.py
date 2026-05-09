@@ -81,6 +81,15 @@ class TestExportVolumesScriptStatic:
         content = _read()
         assert "migration" in content, "tarballs go into ./migration/"
 
+    def test_disables_msys_path_conversion(self):
+        """Git Bash on Windows mangles `-v <host>:/dest` mounts unless
+        MSYS_NO_PATHCONV=1 is set. Removing this line silently breaks the
+        script on any Git-Bash-driven invocation."""
+        content = _read()
+        assert "MSYS_NO_PATHCONV" in content, (
+            "MSYS_NO_PATHCONV must be set so /dest mount paths aren't rewritten by Git Bash"
+        )
+
 
 # ---------------------------------------------------------------------------
 # End-to-end docker round-trip (skipped if no docker)

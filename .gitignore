@@ -43,6 +43,9 @@ frontend/.playwright/
 # Docker
 docker-compose.override.yml
 
+# NAS migration tarballs (one-time export, never committed)
+migration/
+
 # IDE
 .idea/
 .vscode/

@@ -108,7 +108,7 @@ In UGOS file manager, edit `/volume1/docker/python-agent/docker-compose.yml` —
 
 ### Ports on NAS
 
-`8910` frontend · `8911` api · `8912` qdrant. The `891x` block is memorable and avoids common UGOS occupants. If a port collides at first deploy, edit `docker-compose.yml` host port and re-Apply.
+`8910` frontend · `8911` api. **Qdrant intentionally not exposed** — v1.9 has no auth, so binding to the LAN would let any device read/write vectors. The api talks to qdrant on the docker internal network (`qdrant:6333`); for ad-hoc debug use `docker exec` from the NAS host. If a host port collides at first deploy, edit `docker-compose.yml` and re-Apply.
 
 ## Known Pitfalls (past mistakes)
 

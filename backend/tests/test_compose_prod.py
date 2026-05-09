@@ -78,10 +78,19 @@ class TestProdComposeShape:
 
     def test_host_ports(self):
         cfg = _load_prod_compose()
-        # Each ports entry is "host:container"
+        # frontend + api are intentionally exposed for browser + client access.
         assert "8910:3000" in cfg["services"]["frontend"]["ports"]
         assert "8911:5000" in cfg["services"]["api"]["ports"]
-        assert "8912:6333" in cfg["services"]["qdrant"]["ports"]
+
+    def test_qdrant_not_exposed_on_host(self):
+        """SECURITY: qdrant 1.9 has no auth; do not bind it to the host network.
+        The api communicates over the docker internal network."""
+        cfg = _load_prod_compose()
+        qdrant_ports = cfg["services"]["qdrant"].get("ports", [])
+        assert not qdrant_ports, (
+            "qdrant must not bind any host port — v1.9 has no auth, would expose "
+            "the entire vector store to the LAN. Use `docker exec` for ad-hoc debug."
+        )
 
     def test_bind_mounts_to_data_subdirs(self):
         cfg = _load_prod_compose()

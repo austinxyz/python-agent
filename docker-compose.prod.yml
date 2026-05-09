@@ -6,8 +6,10 @@ services:
     image: qdrant/qdrant:v1.9.2
     container_name: python-agent-qdrant
     restart: unless-stopped
-    ports:
-      - "8912:6333"
+    # No host port — qdrant 1.9 has no auth, and the api talks to it on the
+    # docker internal network. Exposing 6333 to LAN would give any device on
+    # 10.0.0.0/24 unrestricted read/write to vectors. Use `docker exec` from
+    # the NAS host for ad-hoc debugging.
     volumes:
       - ./data/qdrant:/qdrant/storage
     healthcheck:
