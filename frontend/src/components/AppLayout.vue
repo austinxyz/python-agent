@@ -1,37 +1,37 @@
 <template>
-  <div class="flex h-screen bg-background overflow-hidden">
-    <!-- Sidebar -->
+  <div class="flex h-screen bg-notion-canvas overflow-hidden">
+    <!-- Desktop sidebar (md and above) -->
     <aside
       :class="[
-        'bg-card border-r border-border flex flex-col h-full transition-all duration-300',
+        'bg-notion-surface-soft border-r border-notion-hairline hidden md:flex flex-col h-full transition-all duration-300',
         isCollapsed ? 'w-16' : 'w-56'
       ]"
     >
       <!-- Logo -->
-      <div class="border-b border-border p-4 flex items-center" :class="isCollapsed ? 'justify-center' : 'justify-between'">
+      <div class="border-b border-notion-hairline p-4 flex items-center" :class="isCollapsed ? 'justify-center' : 'justify-between'">
         <div v-if="!isCollapsed" class="flex items-center space-x-2">
-          <div class="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
-            <Brain class="w-5 h-5 text-white" />
+          <div class="w-8 h-8 bg-notion-brand-navy rounded-lg flex items-center justify-center">
+            <Brain class="w-5 h-5 text-notion-on-dark" />
           </div>
-          <span class="font-bold text-foreground text-sm">知识 Agent</span>
+          <span class="font-semibold text-notion-ink text-sm">知识 Agent</span>
         </div>
-        <div v-else class="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
-          <Brain class="w-5 h-5 text-white" />
+        <div v-else class="w-8 h-8 bg-notion-brand-navy rounded-lg flex items-center justify-center">
+          <Brain class="w-5 h-5 text-notion-on-dark" />
         </div>
         <button
           v-if="!isCollapsed"
           @click="isCollapsed = true"
-          class="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+          class="p-1.5 rounded-md text-notion-steel hover:text-notion-ink hover:bg-notion-tint-gray transition-colors"
         >
           <ChevronsLeft class="w-4 h-4" />
         </button>
       </div>
 
       <!-- Expand button when collapsed -->
-      <div v-if="isCollapsed" class="p-2 flex justify-center border-b border-border">
+      <div v-if="isCollapsed" class="p-2 flex justify-center border-b border-notion-hairline">
         <button
           @click="isCollapsed = false"
-          class="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+          class="p-1.5 rounded-md text-notion-steel hover:text-notion-ink hover:bg-notion-tint-gray transition-colors"
         >
           <ChevronsRight class="w-4 h-4" />
         </button>
@@ -44,12 +44,13 @@
           :key="item.to"
           :to="item.to"
           :title="isCollapsed ? item.label : undefined"
+          :aria-current="isActiveRoute(item.to) ? 'page' : undefined"
           :class="[
             'flex items-center rounded-md text-sm font-medium transition-colors',
             isCollapsed ? 'justify-center p-2.5' : 'space-x-3 px-3 py-2',
             isActiveRoute(item.to)
-              ? 'bg-primary/10 text-primary'
-              : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
+              ? 'bg-notion-tint-lavender text-notion-brand-purple-800'
+              : 'text-notion-slate hover:bg-notion-tint-gray hover:text-notion-ink'
           ]"
         >
           <component :is="item.icon" class="w-5 h-5 flex-shrink-0" />
@@ -58,15 +59,39 @@
       </nav>
 
       <!-- Footer -->
-      <div v-if="!isCollapsed" class="p-4 border-t border-border">
-        <p class="text-xs text-muted-foreground">v1.0.0</p>
+      <div v-if="!isCollapsed" class="p-4 border-t border-notion-hairline">
+        <p class="text-xs text-notion-stone">v1.0.0</p>
       </div>
     </aside>
 
     <!-- Main content -->
-    <main class="flex-1 overflow-auto">
+    <main class="flex-1 overflow-auto pb-[calc(56px+env(safe-area-inset-bottom))] md:pb-0">
       <router-view />
     </main>
+
+    <!-- Mobile bottom tab bar (md-) -->
+    <nav
+      data-bottom-tabs
+      class="md:hidden fixed bottom-0 inset-x-0 z-40 flex items-stretch bg-notion-canvas border-t border-notion-hairline pb-[env(safe-area-inset-bottom)]"
+      role="navigation"
+      aria-label="Primary"
+    >
+      <router-link
+        v-for="item in navItems"
+        :key="item.to"
+        :to="item.to"
+        :aria-current="isActiveRoute(item.to) ? 'page' : undefined"
+        :class="[
+          'flex-1 flex flex-col items-center justify-center gap-0.5 py-2 text-[11px] font-medium transition-colors',
+          isActiveRoute(item.to)
+            ? 'bg-notion-tint-lavender text-notion-brand-purple-800'
+            : 'text-notion-steel hover:text-notion-ink'
+        ]"
+      >
+        <component :is="item.icon" class="w-6 h-6" />
+        <span>{{ item.label }}</span>
+      </router-link>
+    </nav>
   </div>
 </template>
 

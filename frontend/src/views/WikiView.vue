@@ -8,15 +8,27 @@
 
     <!-- Page Header -->
     <div class="bg-notion-brand-navy text-notion-on-dark px-6 py-5 flex-shrink-0">
-      <h1 class="text-xl font-semibold tracking-tight leading-tight">知识库</h1>
-      <p class="text-[13px] text-notion-on-dark-muted mt-0.5">浏览和搜索知识条目</p>
+      <div class="flex items-center gap-3">
+        <button
+          data-tree-toggle
+          class="md:hidden p-2 -ml-2 rounded-md hover:bg-white/10 text-notion-on-dark"
+          aria-label="知识领域"
+          @click="drawerOpen = true"
+        >
+          <Menu class="w-5 h-5" />
+        </button>
+        <div class="flex-1">
+          <h1 class="text-xl font-semibold tracking-tight leading-tight">知识库</h1>
+          <p class="text-[13px] text-notion-on-dark-muted mt-0.5 hidden sm:block">浏览和搜索知识条目</p>
+        </div>
+      </div>
     </div>
 
     <!-- Two-column layout -->
     <div class="flex-1 flex overflow-hidden">
 
-      <!-- LEFT SIDEBAR -->
-      <div class="w-60 flex-shrink-0 bg-notion-canvas border-r border-notion-hairline flex flex-col">
+      <!-- LEFT SIDEBAR (md+) -->
+      <div data-tree-inline class="w-60 flex-shrink-0 bg-notion-canvas border-r border-notion-hairline hidden md:flex flex-col">
 
         <!-- Sidebar header with search -->
         <div class="px-4 py-3 border-b border-notion-hairline-soft space-y-2">
@@ -136,19 +148,69 @@
 
       </div>
     </div>
+
+    <!-- MOBILE TREE DRAWER (md-) -->
+    <MobileDrawer :open="drawerOpen" title="知识领域" @close="drawerOpen = false">
+      <div data-tree-drawer class="py-1">
+        <div class="px-4 py-2 border-b border-notion-hairline-soft">
+          <input
+            v-model="store.searchQuery"
+            type="text"
+            placeholder="搜索知识条目…"
+            class="w-full h-9 px-2.5 text-[13px] bg-notion-surface text-notion-ink rounded-md border border-notion-hairline placeholder:text-notion-stone focus:outline-none focus:border-notion-primary focus:ring-1 focus:ring-notion-primary"
+          />
+        </div>
+        <div v-for="(entries, domain) in store.filteredTree" :key="domain" data-drawer-domain>
+          <div class="flex items-center gap-2 px-3 py-2.5 hover:bg-notion-surface cursor-pointer transition-colors">
+            <span class="flex-1 text-[14px] font-medium text-notion-charcoal truncate">{{ domain }}</span>
+            <span
+              v-if="entries.length > 0"
+              class="px-1.5 py-0.5 text-[11px] font-semibold rounded-full bg-notion-surface border border-notion-hairline text-notion-steel flex-shrink-0"
+            >{{ entries.length }}</span>
+            <button
+              data-drawer-chevron
+              class="flex-shrink-0 text-notion-stone hover:text-notion-steel transition-colors p-1"
+              @click.stop="toggleExpand(domain)"
+            >
+              <svg
+                class="w-3.5 h-3.5 transition-transform duration-200"
+                :class="expandedDomains[domain] ? 'rotate-90' : ''"
+                viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+              >
+                <polyline points="9 18 15 12 9 6" />
+              </svg>
+            </button>
+          </div>
+          <div v-if="expandedDomains[domain]" class="bg-notion-surface-soft">
+            <button
+              v-for="entry in entries"
+              :key="entry.file_id"
+              data-drawer-file
+              class="w-full text-left px-6 py-2 text-[13px] block transition-colors text-notion-slate hover:bg-notion-canvas hover:text-notion-ink"
+              @click="onDrawerEntryClick(entry)"
+            >
+              <span class="truncate block leading-relaxed">{{ entry.title || entry.orig_name }}</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </MobileDrawer>
   </div>
 </template>
 
 <script setup>
 import { ref, reactive, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
+import { Menu } from 'lucide-vue-next'
 import { useWikiStore } from '../stores/wiki.js'
 import { useFileContent } from '../composables/useFileContent.js'
+import MobileDrawer from '../components/MobileDrawer.vue'
 
 const store = useWikiStore()
 const route = useRoute()
 
 const rightPanelState = ref('welcome')
+const drawerOpen = ref(false)
 const expandedDomains = reactive({})
 const viewingFileId = ref(null)
 const viewingTitle = ref('')
@@ -187,6 +249,11 @@ function onEntryClick(entry) {
   if (entry.filename) {
     loadContent(entry.file_id, entry.filename)
   }
+}
+
+function onDrawerEntryClick(entry) {
+  drawerOpen.value = false
+  onEntryClick(entry)
 }
 
 function openByFileId(fileId) {

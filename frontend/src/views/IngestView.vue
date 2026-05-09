@@ -7,15 +7,27 @@
 
     <!-- Page Header — brand-navy hero band -->
     <div class="bg-notion-brand-navy text-notion-on-dark px-6 py-5 flex-shrink-0">
-      <h1 class="text-xl font-semibold tracking-tight leading-tight">原始材料库</h1>
-      <p class="text-[13px] text-notion-on-dark-muted mt-0.5">摄入文件、网页或文本，按领域分类管理</p>
+      <div class="flex items-center gap-3">
+        <button
+          data-tree-toggle
+          class="md:hidden p-2 -ml-2 rounded-md hover:bg-white/10 text-notion-on-dark"
+          aria-label="领域分类"
+          @click="drawerOpen = true"
+        >
+          <Menu class="w-5 h-5" />
+        </button>
+        <div class="flex-1 min-w-0">
+          <h1 class="text-xl font-semibold tracking-tight leading-tight">原始材料库</h1>
+          <p class="text-[13px] text-notion-on-dark-muted mt-0.5 hidden sm:block">摄入文件、网页或文本，按领域分类管理</p>
+        </div>
+      </div>
     </div>
 
     <!-- Two-column layout -->
     <div class="flex-1 flex overflow-hidden">
 
-      <!-- LEFT SIDEBAR -->
-      <div class="w-60 flex-shrink-0 bg-notion-canvas border-r border-notion-hairline flex flex-col">
+      <!-- LEFT SIDEBAR (md+) -->
+      <div data-tree-inline class="w-60 flex-shrink-0 bg-notion-canvas border-r border-notion-hairline hidden md:flex flex-col">
         <div class="px-4 py-3 border-b border-notion-hairline-soft flex items-center justify-between">
           <h2 class="text-[11px] font-semibold uppercase tracking-[0.08em] text-notion-steel">领域分类</h2>
           <span class="text-[11px] text-notion-stone">{{ files.length }} 个文件</span>
@@ -334,14 +346,58 @@
 
       </div>
     </div>
+
+    <!-- MOBILE TREE DRAWER (md-) -->
+    <MobileDrawer :open="drawerOpen" title="领域分类" @close="drawerOpen = false">
+      <div data-tree-drawer class="py-1">
+        <div v-for="d in DOMAINS" :key="d" data-drawer-domain>
+          <div class="flex items-center gap-2 px-3 py-2.5 hover:bg-notion-surface cursor-pointer transition-colors">
+            <span
+              class="flex-1 text-[14px] font-medium text-notion-charcoal truncate"
+              @click="onDrawerDomainClick(d)"
+            >{{ d }}</span>
+            <span
+              v-if="filesForDomain(d).length > 0"
+              class="px-1.5 py-0.5 text-[11px] font-semibold rounded-full bg-notion-surface border border-notion-hairline text-notion-steel flex-shrink-0"
+            >{{ filesForDomain(d).length }}</span>
+            <button
+              data-drawer-chevron
+              class="flex-shrink-0 text-notion-stone hover:text-notion-steel transition-colors p-1"
+              @click.stop="toggleExpand(d)"
+            >
+              <svg
+                class="w-3.5 h-3.5 transition-transform duration-200"
+                :class="expandedDomains[d] ? 'rotate-90' : ''"
+                viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+              >
+                <polyline points="9 18 15 12 9 6" />
+              </svg>
+            </button>
+          </div>
+          <div v-if="expandedDomains[d]" class="bg-notion-surface-soft">
+            <button
+              v-for="file in filesForDomain(d)"
+              :key="file.file_id"
+              data-drawer-file
+              class="w-full text-left px-6 py-2 text-[13px] block transition-colors text-notion-slate hover:bg-notion-canvas hover:text-notion-ink"
+              @click="onDrawerFileClick(file)"
+            >
+              <span class="truncate block leading-relaxed">{{ file.title || file.orig_name }}</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </MobileDrawer>
   </div>
 </template>
 
 <script setup>
 import { ref, reactive, onMounted, nextTick } from 'vue'
+import { Menu } from 'lucide-vue-next'
 import { useIngestStore } from '../stores/ingest.js'
 import { useFileContent } from '../composables/useFileContent.js'
 import { DOMAINS } from '../constants/domains.js'
+import MobileDrawer from '../components/MobileDrawer.vue'
 
 const store = useIngestStore()
 
@@ -349,6 +405,7 @@ const rightPanelState = ref('welcome')
 const selectedDomain = ref('')
 const files = ref([])
 const expandedDomains = reactive({})
+const drawerOpen = ref(false)
 const viewingFileId = ref(null)
 const viewingTitle = ref('')
 const viewingSourceType = ref('')
@@ -419,6 +476,16 @@ function onFileClick(file) {
   if (file.filename) {
     loadContent(file.file_id, file.orig_name || file.filename)
   }
+}
+
+function onDrawerDomainClick(domain) {
+  drawerOpen.value = false
+  onDomainNameClick(domain)
+}
+
+function onDrawerFileClick(file) {
+  drawerOpen.value = false
+  onFileClick(file)
 }
 
 function startEdit(file) {

@@ -331,3 +331,161 @@ describe('ChatView save-to-notes', () => {
     expect(store.saveMessageToNote).not.toHaveBeenCalled()
   })
 })
+
+// ---------------------------------------------------------------------------
+// Mobile layout (Group 3 / mobile-friendly change)
+// ---------------------------------------------------------------------------
+
+describe('ChatView mobile shape', () => {
+  it('desktop sessions sidebar is hidden at md- via Tailwind hidden md:flex', async () => {
+    const { wrapper } = makeWrapper()
+    await flushPromises()
+    const sidebar = wrapper.find('[data-sessions-sidebar]')
+    expect(sidebar.exists()).toBe(true)
+    const cls = sidebar.classes().join(' ')
+    expect(cls).toMatch(/hidden md:flex|md:flex/)
+  })
+
+  it('mobile header has ☰ sessions toggle and 🆕 new chat buttons (md:hidden)', async () => {
+    const { wrapper } = makeWrapper()
+    await flushPromises()
+    const toggle = wrapper.find('[data-sessions-toggle]')
+    const newChat = wrapper.find('[data-new-chat]')
+    expect(toggle.exists()).toBe(true)
+    expect(newChat.exists()).toBe(true)
+    expect(toggle.classes().join(' ')).toMatch(/md:hidden/)
+    expect(newChat.classes().join(' ')).toMatch(/md:hidden/)
+  })
+
+  it('☰ opens the sessions drawer; tapping a session closes the drawer', async () => {
+    const { wrapper, store } = makeWrapper()
+    await flushPromises()
+    const toggle = wrapper.find('[data-sessions-toggle]')
+    expect(wrapper.find('[data-sessions-drawer]').exists()).toBe(false)
+    await toggle.trigger('click')
+    const drawer = wrapper.find('[data-sessions-drawer]')
+    expect(drawer.exists()).toBe(true)
+    // Sessions render inside the drawer too
+    const drawerSessions = drawer.findAll('[data-drawer-session]')
+    expect(drawerSessions.length).toBe(SESSIONS_FIXTURE.length)
+    // Click the first session — drawer should close + loadSession called
+    store.loadSession = vi.fn().mockResolvedValue(undefined)
+    await drawerSessions[0].trigger('click')
+    await flushPromises()
+    expect(store.loadSession).toHaveBeenCalledWith('s1')
+    expect(wrapper.find('[data-sessions-drawer]').exists()).toBe(false)
+  })
+
+  it('🆕 starts a new session without opening the drawer', async () => {
+    const { wrapper, store } = makeWrapper()
+    await flushPromises()
+    store.newSession = vi.fn()
+    await wrapper.find('[data-new-chat]').trigger('click')
+    expect(store.newSession).toHaveBeenCalled()
+    expect(wrapper.find('[data-sessions-drawer]').exists()).toBe(false)
+  })
+
+  it('input wrapper has safe-area-inset-bottom and uses dvh viewport', async () => {
+    const { wrapper } = makeWrapper()
+    await flushPromises()
+    const inputWrap = wrapper.find('[data-chat-input-wrap]')
+    expect(inputWrap.exists()).toBe(true)
+    const cls = inputWrap.classes().join(' ')
+    // safe-area-inset-bottom either via env() alone or wrapped in calc with extra clearance
+    expect(cls).toMatch(/safe-area-inset-bottom|pb-safe/)
+    // The root container uses 100dvh (or h-dvh) so iOS keyboard pop-ups don't overflow.
+    const root = wrapper.find('[data-chat-root]')
+    expect(root.exists()).toBe(true)
+    const rootCls = root.classes().join(' ')
+    expect(rootCls).toMatch(/h-\[100dvh\]|h-dvh|min-h-\[100dvh\]/)
+  })
+})
+
+describe('ChatView auto-scroll behavior', () => {
+  it('autoscrolls to bottom when user is already near bottom', async () => {
+    const { wrapper, store } = makeWrapper()
+    store.fetchSessions = vi.fn().mockResolvedValue(undefined)
+    // Seed a session with a long message history.
+    store.currentSession = {
+      id: 's1',
+      title: 't',
+      model: 'haiku',
+      created_at: '2026-05-08T10:00:00Z',
+      messages: Array.from({ length: 30 }, (_, i) => ({
+        role: i % 2 === 0 ? 'user' : 'assistant',
+        content: 'msg ' + i,
+        sources: [],
+      })),
+    }
+    await flushPromises()
+    const messagesEl = wrapper.find('[data-messages]').element
+    // happy-dom doesn't compute layout, so we patch scrollHeight/scrollTop
+    Object.defineProperty(messagesEl, 'scrollHeight', { value: 5000, configurable: true })
+    Object.defineProperty(messagesEl, 'clientHeight', { value: 800, configurable: true })
+    messagesEl.scrollTop = 4180 // distance from bottom = 5000 - 800 - 4180 = 20px → near bottom
+    // Push a new token by appending content; component watches messages length / streaming
+    store.currentSession.messages = [...store.currentSession.messages, { role: 'assistant', content: 'new', sources: [] }]
+    await flushPromises()
+    // After autoscroll, scrollTop should equal scrollHeight - clientHeight (= 4200)
+    expect(messagesEl.scrollTop).toBe(4200)
+  })
+
+  it('autoscrolls when streaming tokens mutate the last message content (length unchanged)', async () => {
+    // Regression for the bug where the watcher only fired on length change.
+    // During streaming the chat store appends tokens to messages[last].content
+    // in place; the array length stays constant. The autoscroll must still
+    // follow that growing content.
+    const { wrapper, store } = makeWrapper()
+    store.fetchSessions = vi.fn().mockResolvedValue(undefined)
+    store.currentSession = {
+      id: 's1',
+      title: 't',
+      model: 'haiku',
+      created_at: '2026-05-08T10:00:00Z',
+      messages: [
+        { role: 'user', content: 'hi', sources: [] },
+        { role: 'assistant', content: '', sources: [] },
+      ],
+    }
+    await flushPromises()
+    const messagesEl = wrapper.find('[data-messages]').element
+    Object.defineProperty(messagesEl, 'scrollHeight', { value: 5000, configurable: true, writable: true })
+    Object.defineProperty(messagesEl, 'clientHeight', { value: 800, configurable: true, writable: true })
+    messagesEl.scrollTop = 4180 // distance from bottom = 20 → near bottom
+    // Mutate the last message's content (token stream simulation) — length stays at 2.
+    store.currentSession = {
+      ...store.currentSession,
+      messages: [
+        store.currentSession.messages[0],
+        { ...store.currentSession.messages[1], content: 'partial answer…' },
+      ],
+    }
+    await flushPromises()
+    expect(messagesEl.scrollTop).toBe(4200)
+  })
+
+  it('does NOT autoscroll when user has scrolled up significantly', async () => {
+    const { wrapper, store } = makeWrapper()
+    store.fetchSessions = vi.fn().mockResolvedValue(undefined)
+    store.currentSession = {
+      id: 's1',
+      title: 't',
+      model: 'haiku',
+      created_at: '2026-05-08T10:00:00Z',
+      messages: Array.from({ length: 30 }, (_, i) => ({
+        role: i % 2 === 0 ? 'user' : 'assistant',
+        content: 'msg ' + i,
+        sources: [],
+      })),
+    }
+    await flushPromises()
+    const messagesEl = wrapper.find('[data-messages]').element
+    Object.defineProperty(messagesEl, 'scrollHeight', { value: 5000, configurable: true })
+    Object.defineProperty(messagesEl, 'clientHeight', { value: 800, configurable: true })
+    messagesEl.scrollTop = 1000 // distance from bottom = 5000 - 800 - 1000 = 3200px → far from bottom
+    store.currentSession.messages = [...store.currentSession.messages, { role: 'assistant', content: 'new', sources: [] }]
+    await flushPromises()
+    // scrollTop should NOT have moved.
+    expect(messagesEl.scrollTop).toBe(1000)
+  })
+})

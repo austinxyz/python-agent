@@ -210,3 +210,40 @@ describe('4.6 file title click opens content viewer', () => {
     expect(wrapper.find('[data-panel="content"]').exists()).toBe(true)
   })
 })
+
+// ---------------------------------------------------------------------------
+// Mobile drawer (mobile-friendly change)
+// ---------------------------------------------------------------------------
+
+describe('IngestView mobile shape', () => {
+  it('inline tree is hidden md- via hidden md:flex', async () => {
+    const { wrapper } = makeWrapper(MOCK_FILES)
+    await flushPromises()
+    const inline = wrapper.find('[data-tree-inline]')
+    expect(inline.exists()).toBe(true)
+    expect(inline.classes().join(' ')).toMatch(/hidden md:flex/)
+  })
+
+  it('header has ☰ tree-toggle (md:hidden)', async () => {
+    const { wrapper } = makeWrapper(MOCK_FILES)
+    await flushPromises()
+    const toggle = wrapper.find('[data-tree-toggle]')
+    expect(toggle.exists()).toBe(true)
+    expect(toggle.classes().join(' ')).toMatch(/md:hidden/)
+  })
+
+  it('☰ opens drawer; selecting a domain closes it and shows the domain panel', async () => {
+    const { wrapper } = makeWrapper(MOCK_FILES)
+    await flushPromises()
+    expect(wrapper.find('[data-tree-drawer]').exists()).toBe(false)
+    await wrapper.find('[data-tree-toggle]').trigger('click')
+    const drawer = wrapper.find('[data-tree-drawer]')
+    expect(drawer.exists()).toBe(true)
+    const domains = drawer.findAll('[data-drawer-domain]')
+    expect(domains.length).toBeGreaterThan(0)
+    // Click first domain's name
+    await domains[0].find('span').trigger('click')
+    await flushPromises()
+    expect(wrapper.find('[data-tree-drawer]').exists()).toBe(false)
+  })
+})

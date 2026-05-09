@@ -223,3 +223,42 @@ describe('no-filename entry', () => {
     expect(wrapper.find('[data-panel="content"]').text()).toContain('无原始文件可预览')
   })
 })
+
+// ---------------------------------------------------------------------------
+// Mobile drawer (mobile-friendly change)
+// ---------------------------------------------------------------------------
+
+describe('WikiView mobile shape', () => {
+  it('inline tree is hidden md- via hidden md:flex', async () => {
+    const { wrapper } = makeWrapper(MOCK_TREE)
+    await flushPromises()
+    const inline = wrapper.find('[data-tree-inline]')
+    expect(inline.exists()).toBe(true)
+    expect(inline.classes().join(' ')).toMatch(/hidden md:flex/)
+  })
+
+  it('header has ☰ tree-toggle button (md:hidden)', async () => {
+    const { wrapper } = makeWrapper(MOCK_TREE)
+    await flushPromises()
+    const toggle = wrapper.find('[data-tree-toggle]')
+    expect(toggle.exists()).toBe(true)
+    expect(toggle.classes().join(' ')).toMatch(/md:hidden/)
+  })
+
+  it('☰ opens drawer; selecting a file in the drawer closes it', async () => {
+    const { wrapper } = makeWrapper(MOCK_TREE)
+    await flushPromises()
+    expect(wrapper.find('[data-tree-drawer]').exists()).toBe(false)
+    await wrapper.find('[data-tree-toggle]').trigger('click')
+    const drawer = wrapper.find('[data-tree-drawer]')
+    expect(drawer.exists()).toBe(true)
+    // Drawer renders the same domain tree
+    const drawerDomains = drawer.findAll('[data-drawer-domain]')
+    expect(drawerDomains.length).toBeGreaterThan(0)
+    // Expand a domain to reveal a file
+    await drawer.find('[data-drawer-chevron]').trigger('click')
+    await drawer.find('[data-drawer-file]').trigger('click')
+    await flushPromises()
+    expect(wrapper.find('[data-tree-drawer]').exists()).toBe(false)
+  })
+})

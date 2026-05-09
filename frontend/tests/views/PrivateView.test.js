@@ -293,3 +293,48 @@ describe('edit and delete from item-view', () => {
     expect(store.deleteEntry).toHaveBeenCalledWith('e1')
   })
 })
+
+// ---------------------------------------------------------------------------
+// Mobile drawer (mobile-friendly change)
+// ---------------------------------------------------------------------------
+
+async function mountReady() {
+  const { wrapper, store } = makeWrapper()
+  await flushPromises()
+  return { wrapper, store }
+}
+
+describe('PrivateView mobile shape', () => {
+  it('inline sidebar is hidden md- via hidden md:flex', async () => {
+    const { wrapper } = await mountReady()
+    const inline = wrapper.find('[data-tree-inline]')
+    expect(inline.exists()).toBe(true)
+    expect(inline.classes().join(' ')).toMatch(/hidden md:flex/)
+  })
+
+  it('header has ☰ tree-toggle and ＋ new-entry buttons (md:hidden)', async () => {
+    const { wrapper } = await mountReady()
+    const toggle = wrapper.find('[data-tree-toggle]')
+    const plus = wrapper.find('[data-new-entry]')
+    expect(toggle.exists()).toBe(true)
+    expect(plus.exists()).toBe(true)
+    expect(toggle.classes().join(' ')).toMatch(/md:hidden/)
+    expect(plus.classes().join(' ')).toMatch(/md:hidden/)
+  })
+
+  it('＋ in header opens new-entry form without opening the drawer', async () => {
+    const { wrapper } = await mountReady()
+    expect(wrapper.find('[data-tree-drawer]').exists()).toBe(false)
+    await wrapper.find('[data-new-entry]').trigger('click')
+    await flushPromises()
+    expect(wrapper.find('[data-tree-drawer]').exists()).toBe(false)
+    // The right panel transitions to new-entry state
+    expect(wrapper.find('[data-panel="new-entry"]').exists()).toBe(true)
+  })
+
+  it('☰ opens the tree drawer with the same directory tree', async () => {
+    const { wrapper } = await mountReady()
+    await wrapper.find('[data-tree-toggle]').trigger('click')
+    expect(wrapper.find('[data-tree-drawer]').exists()).toBe(true)
+  })
+})

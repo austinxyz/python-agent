@@ -9,13 +9,29 @@
     <!-- Page Header — brand-navy hero band, replaces V1 blue→purple gradient -->
     <div class="bg-notion-brand-navy text-notion-on-dark px-6 py-5 flex-shrink-0">
       <div class="flex items-center gap-3">
+        <button
+          data-tree-toggle
+          class="md:hidden p-2 -ml-2 rounded-md hover:bg-white/10 text-notion-on-dark"
+          aria-label="目录"
+          @click="drawerOpen = true"
+        >
+          <Menu class="w-5 h-5" />
+        </button>
         <div class="w-9 h-9 rounded-md bg-white/10 flex items-center justify-center">
           <Lock class="w-5 h-5" />
         </div>
-        <div>
+        <div class="flex-1 min-w-0">
           <h1 class="text-xl font-semibold tracking-tight leading-tight">私有数据</h1>
-          <p class="text-[13px] text-notion-on-dark-muted mt-0.5">条目按目录组织，模板条目参与 AI 检索；笔记不参与</p>
+          <p class="text-[13px] text-notion-on-dark-muted mt-0.5 hidden sm:block">条目按目录组织，模板条目参与 AI 检索；笔记不参与</p>
         </div>
+        <button
+          data-new-entry
+          class="md:hidden p-2 -mr-2 rounded-md hover:bg-white/10 text-notion-on-dark"
+          aria-label="新建条目"
+          @click="openNewEntry"
+        >
+          <Plus class="w-5 h-5" />
+        </button>
       </div>
     </div>
 
@@ -26,8 +42,8 @@
     <!-- Two-column layout -->
     <div class="flex-1 flex overflow-hidden">
 
-      <!-- LEFT SIDEBAR -->
-      <div data-sidebar class="w-72 flex-shrink-0 bg-notion-canvas border-r border-notion-hairline flex flex-col">
+      <!-- LEFT SIDEBAR (md+) -->
+      <div data-sidebar data-tree-inline class="w-72 flex-shrink-0 bg-notion-canvas border-r border-notion-hairline hidden md:flex flex-col">
         <!-- Section header -->
         <div class="px-4 py-3 border-b border-notion-hairline-soft flex items-center justify-between">
           <h2 class="text-[11px] font-semibold uppercase tracking-[0.08em] text-notion-steel">目录</h2>
@@ -390,15 +406,42 @@
 
       </div>
     </div>
+
+    <!-- MOBILE TREE DRAWER (md-) -->
+    <MobileDrawer :open="drawerOpen" title="目录" @close="drawerOpen = false">
+      <div data-tree-drawer class="py-1">
+        <div class="px-3 py-2 grid grid-cols-2 gap-2 border-b border-notion-hairline-soft">
+          <button
+            class="px-3 h-9 bg-notion-primary hover:bg-notion-primary-pressed text-notion-on-primary text-[13px] font-medium rounded-md transition-colors"
+            @click="onDrawerNewEntry"
+          >+ 新建条目</button>
+          <button
+            class="px-3 h-9 bg-notion-ink-deep hover:bg-notion-charcoal text-notion-on-dark text-[13px] font-medium rounded-md transition-colors"
+            @click="onDrawerNewNote"
+          >+ 新建笔记</button>
+        </div>
+        <div class="py-2 px-1">
+          <DirectoryTreeNode
+            :tree="store.combinedTree"
+            :depth="0"
+            :selected-id="selectedItemId"
+            :expanded="expandedDirs"
+            @toggle="toggleDir"
+            @select="onDrawerSelectItem"
+          />
+        </div>
+      </div>
+    </MobileDrawer>
   </div>
 </template>
 
 <script setup>
 import { ref, reactive, computed, onMounted, watch, h } from 'vue'
 import { useRoute } from 'vue-router'
-import { Lock } from 'lucide-vue-next'
+import { Lock, Menu, Plus } from 'lucide-vue-next'
 import { usePrivateStore } from '../stores/private.js'
 import { markdownToHtml } from '../composables/useFileContent.js'
+import MobileDrawer from '../components/MobileDrawer.vue'
 
 const store = usePrivateStore()
 const route = useRoute()
@@ -414,6 +457,7 @@ function renderMd(text) {
 const rightState = ref('welcome') // welcome | item-view | item-edit | new-entry | new-note
 const selectedItemId = ref(null)
 const expandedDirs = reactive({})
+const drawerOpen = ref(false)
 const formError = ref('')
 const submitting = ref(false)
 
@@ -578,6 +622,21 @@ function openNewEntry() {
   entryForm.content = {}
   formError.value = ''
   rightState.value = 'new-entry'
+}
+
+function onDrawerSelectItem(itemId) {
+  drawerOpen.value = false
+  selectItem(itemId)
+}
+
+function onDrawerNewEntry() {
+  drawerOpen.value = false
+  openNewEntry()
+}
+
+function onDrawerNewNote() {
+  drawerOpen.value = false
+  openNewNote()
 }
 
 function pickTemplate(tpl) {
