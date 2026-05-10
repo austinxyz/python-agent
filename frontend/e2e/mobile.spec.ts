@@ -6,7 +6,8 @@
  * Backend API calls are mocked the same way chat.spec.ts mocks them, so this
  * test never hits Anthropic / OpenAI and never writes real DB rows.
  */
-import { test, expect, type Page, type Route } from '@playwright/test'
+import { test, expect } from './auth-fixture'
+import type { Page, Route } from '@playwright/test'
 
 const E2E_PREFIX = '__e2e_'
 const FAKE_SESSION_ID = 'e2e-mobile-session-001'
@@ -106,7 +107,8 @@ test.describe('mobile bottom tab nav', () => {
     await page.goto('/chat')
     const bottomTabs = page.locator('[data-bottom-tabs]')
     await expect(bottomTabs).toBeVisible()
-    await expect(bottomTabs.locator('a')).toHaveCount(4)
+    // 5 tabs: 知识库 / 摄入 / 对话 / 私有 / 我 — the 5th "我" lands with multi-user-auth-core.
+    await expect(bottomTabs.locator('a')).toHaveCount(5)
     // Desktop sidebar (<aside>) is hidden via Tailwind hidden md:flex.
     await expect(page.locator('aside')).toBeHidden()
   })

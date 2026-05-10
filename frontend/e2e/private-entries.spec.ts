@@ -4,7 +4,7 @@
  * Runs against the user-managed docker stack (see playwright.config.ts).
  * See helpers.ts for the data-isolation convention.
  */
-import { test, expect } from '@playwright/test'
+import { test, expect } from './auth-fixture'
 import {
   cleanupEntries,
   clickSaveAndCaptureEntryId,

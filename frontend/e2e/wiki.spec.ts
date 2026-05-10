@@ -4,7 +4,7 @@
  * spec doesn't depend on whatever data happens to live in the user's
  * actual knowledge collection.
  */
-import { test, expect } from '@playwright/test'
+import { test, expect } from './auth-fixture'
 
 const FIXTURE_TREE = {
   '退休规划': [

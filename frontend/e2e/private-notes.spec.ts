@@ -5,7 +5,7 @@
  * (e.g., "退休规划/Roth相关"), so this spec also exercises the recursive
  * DirectoryTreeNode renderer.
  */
-import { test, expect } from '@playwright/test'
+import { test, expect } from './auth-fixture'
 import {
   cleanupNotes,
   clickSaveAndCaptureNoteId,

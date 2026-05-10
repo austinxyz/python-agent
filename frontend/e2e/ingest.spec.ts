@@ -4,7 +4,7 @@
  * POST /ingest path is intercepted with page.route() so the test never
  * triggers the real pipeline (no OpenAI tokens, no Qdrant pollution).
  */
-import { test, expect } from '@playwright/test'
+import { test, expect } from './auth-fixture'
 
 const DOMAINS = [
   '退休规划', '账户类型', '税务策略', '投资品种', '保险规划',

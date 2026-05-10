@@ -6,7 +6,8 @@
  * The save-to-notes flow uses a real-looking POST /api/private/notes mock
  * — we never write to the user's actual notes.
  */
-import { test, expect, type Page, type Route } from '@playwright/test'
+import { test, expect } from './auth-fixture'
+import type { Page, Route } from '@playwright/test'
 
 const E2E_PREFIX = '__e2e_'
 

@@ -4,7 +4,7 @@
  *   - Custom directory override: a sub-path under a template directory works
  *   - Dirty-check guard: switching from new-entry mid-fill prompts a confirm
  */
-import { test, expect } from '@playwright/test'
+import { test, expect } from './auth-fixture'
 import {
   cleanupEntries,
   clickSaveAndCaptureEntryId,

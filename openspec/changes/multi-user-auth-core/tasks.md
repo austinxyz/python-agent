@@ -40,18 +40,18 @@
 - [x] 5.1 RED — `test_cli_invite_user.py`: 7 cases (creates row + token + prints URL, default role member, canonicalizes email, duplicate exits non-zero, invalid role/email return error, missing args show usage).
 - [x] 5.2 GREEN — `backend/app/cli/invite_user.py` shipped. Reuses `user_service.create_invited_user` + `create_invite_token` + `invite_url_for`.
 - [x] 5.3 Run pytest — 7/7 green; full backend 295 passed.
-- [ ] 5.4 CLAUDE.md update — deferred to end-of-session ship batch.
+- [x] 5.4 CLAUDE.md update — added new auth env vars + bootstrap pitfall + invite-via-CLI section.
 - [ ] 5.5 superpowers:requesting-code-review — deferred.
 
 ## 6. Frontend store + axios + router
 
-- [ ] 6.1 RED — `frontend/tests/stores/auth.test.js`: store actions call expected endpoints with right bodies; `fetchMe` populates currentUser on 200, sets null on 401; `loginWithPassword` calls `/api/auth/login`; `loginWithGoogle` calls `/api/auth/login/google`; `acceptInvite` / `changePassword` / `logout` route correctly.
-- [ ] 6.2 GREEN — `frontend/src/stores/auth.js`. Inject axios instance for testability (existing pattern from chat.js).
-- [ ] 6.3 RED — `frontend/tests/api-401-interceptor.test.js`: a 401 from `/api/private/entries` clears `auth.currentUser` and pushes `/login?redirect=/private`; a 401 from `/api/auth/login` does NOT trigger redirect (the action handles it).
-- [ ] 6.4 GREEN — extend `frontend/src/api/index.js` with the response interceptor.
-- [ ] 6.5 RED — `frontend/tests/router-guard.test.js`: navigation to `/private` while logged-out → redirect to `/login?redirect=/private`; `/login` and `/accept-invite` reachable without auth; `/` redirects to `/chat`; logged-in user navigating to `/admin/anything` (none exist yet) is redirected to `/chat` per the future-proof admin guard.
-- [ ] 6.6 GREEN — `frontend/src/router/index.js` adds `/login`, `/accept-invite`, `/change-password`, `/me`; root redirect changes to `/chat`; global beforeEach with auth + admin checks.
-- [ ] 6.7 Run vitest — full suite green (existing 169 + new tests).
+- [x] 6.1 RED — `frontend/tests/stores/auth.test.js`: 11 cases on store actions + endpoint bodies. Shipped in commit d84f859.
+- [x] 6.2 GREEN — `frontend/src/stores/auth.js` with `_api` injection point. Shipped in commit d84f859.
+- [x] 6.3 RED — `frontend/tests/api-401-interceptor.test.js`: 6 cases (private 401 fires handler, auth/login 401 does not, auth/me 401 does not, error still rejects, no-handler safe, 500 ignored).
+- [x] 6.4 GREEN — `frontend/src/api/index.js` registerOnUnauthorized + interceptor. Shipped in commit d84f859.
+- [x] 6.5 RED — `frontend/tests/router-guard.test.js`: 12 cases (public routes pass, protected routes redirect, root redirects to /chat, admin guard, fetchMe is invoked).
+- [x] 6.6 GREEN — `frontend/src/router/index.js` with 4 new routes + admin guard. Shipped in commit d84f859.
+- [x] 6.7 Run vitest — 198 passed (was 180; +18 from 6.3 + 6.5).
 - [ ] 6.8 Run superpowers:requesting-code-review on the diff for group 6.
 
 ## 7. Frontend views (Login / AcceptInvite / ChangePassword / Me)
@@ -84,28 +84,33 @@
 - [x] 8.9 Run vitest — 180 passed.
 - [ ] 8.10 superpowers:requesting-code-review — deferred.
 
-## 9. Live integration
+## 9. Live integration — automated via `e2e/integration.spec.ts`
 
-- [ ] 9.1 Bring up dev stack with `npm run dev:up`. Verify in browser at `localhost:3000`: bootstrap migration runs (check `docker logs`), root URL `/` redirects to `/chat` then `/login` since no session. Submit invite URL from logs to verify the full /accept-invite → /chat flow with admin email.
-- [ ] 9.2 In another browser profile, run `docker exec -it python-agent-dev-api-1 python -m app.cli.invite_user testuser@example.com member`. Use the printed URL → /accept-invite → set password → land on /chat. Verify that user's `/private` is empty (isolation works).
-- [ ] 9.3 As admin in browser 1, ingest a knowledge file. As member in browser 2, verify the file is visible (knowledge is shared).
-- [ ] 9.4 As member, create a private entry. As admin, verify it does NOT appear under admin's `/private`.
-- [ ] 9.5 If `GOOGLE_CLIENT_ID` is configured, sign in with Google as admin (email matches admin row) and verify auto-link sets `google_sub`. Sign out, sign in again with password, verify still works (both methods coexist).
+The manual smoke checklist was replaced by an automated Playwright spec
+that talks to the real dev backend (no mocks). Run with:
+`npm run e2e:integration` — assumes `docker compose -p python-agent-dev up
+--build -d` has been done so the api container has the auth code.
+
+- [x] 9.1 Stack readiness check + protected-route → /login redirect — `integration — stack readiness` describe.
+- [x] 9.2 CLI invite + accept-invite + login + logout/relogin — `integration — invite flow` describe.
+- [ ] 9.3 Shared knowledge across users — DEFERRED (real ingestion costs OpenAI tokens; covered by pytest unit tests for the shared-collection filter).
+- [x] 9.4 Cross-user private-data isolation — `integration — private-data isolation` describe.
+- [ ] 9.5 Google login — DEFERRED (requires GOOGLE_CLIENT_ID; only tested manually when configured).
 
 ## 10. E2E updates
 
-- [ ] 10.1 RED — existing E2E specs (`chat.spec.ts`, `wiki.spec.ts`, `private-*.spec.ts`, `ingest.spec.ts`, `mobile.spec.ts`) all fail post-change because they assume no login. Decide: either add a pre-test login step or mock the session cookie. Mock approach is faster and matches existing API-mock pattern.
-- [ ] 10.2 GREEN — add a Playwright fixture (`e2e/auth-fixture.ts`) that, before each test, mocks `/api/auth/me` to return a fixed test user and stores a session cookie. Use it as the default fixture for all existing specs.
-- [ ] 10.3 NEW — `e2e/auth.spec.ts`: full happy-path flow without the auth-fixture: visit `/wiki` while logged-out → redirect to /login → submit valid credentials (mocked `/api/auth/login`) → land at /wiki. Logout → back at /login. AcceptInviteView with mocked token endpoint.
-- [ ] 10.4 Run `npm run e2e` — full suite (desktop + mobile) green.
+- [x] 10.1 RED — confirmed existing specs assume no login; iterated on the fixture: first attempt (mock `/api/auth/me`) failed because the new 401 interceptor logs the user out on any other 401. Final approach: real session via login.
+- [x] 10.2 GREEN — `e2e/auth-fixture.ts` extends `test`: ensures a shared `e2e-shared@example.com` user once (CLI invite + accept-invite if absent), then `POST /api/auth/login` per test to set a real Flask session cookie. All 7 existing specs (`chat`, `wiki`, `ingest`, `mobile`, `private-entries`, `private-coverage`, `private-notes`) updated to import from `./auth-fixture`.
+- [x] 10.3 NEW — `e2e/auth.spec.ts`: 7 cases (logged-out /wiki redirect, logged-out /private redirect, valid login → redirect target, bad creds inline error, logout → /login, accept-invite happy path with banner, expired/used/invalid token error states).
+- [x] 10.4 `npm run e2e` — 56/56 tests pass (chromium + mobile-chrome). Mobile bottom-tab assertion fixed from 4 → 5 to reflect the new "我" tab.
 - [ ] 10.5 Run superpowers:requesting-code-review on the e2e diff.
 
 ## 11. Verification & ship
 
-- [ ] 11.1 Run full backend pytest — should be 218 + new (~80 net) all green.
-- [ ] 11.2 Run full frontend vitest — should be 169 + new (~50 net) all green.
-- [ ] 11.3 Run full Playwright — desktop + mobile + new auth spec all green.
-- [ ] 11.4 Manual smoke on dev stack: full flow per group 9.
+- [x] 11.1 Backend pytest — 295 passed, 1 skipped (218 baseline + 77 net).
+- [x] 11.2 Frontend vitest — 198 passed (169 baseline + 29 net: 11 auth store + 6 401 interceptor + 12 router guard).
+- [x] 11.3 Playwright — 56 passed (chromium + mobile-chrome). Plus 5/5 in `integration.spec.ts` against real backend.
+- [x] 11.4 Manual smoke replaced by `e2e/integration.spec.ts` — see group 9.
 - [ ] 11.5 Run superpowers:verification-before-completion: tests green; no console.log; spec ↔ implementation consistent; CLAUDE.md updated.
 - [ ] 11.6 Final superpowers:requesting-code-review on the entire change diff.
 
