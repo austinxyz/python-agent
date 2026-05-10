@@ -227,52 +227,45 @@ artifacts:
     generates: tasks.md
     description: Implementation checklist with trackable tasks
     template: tasks.md
-    instruction: >
+    instruction: |
       Create the task list that breaks down the implementation work.
 
+      **STRUCTURAL RULES (apply phase parses checkboxes):**
+      - Tasks MUST be: `- [ ] N.X <description>`
+      - Group related tasks under `## N. <group name>` headings
+      - Order tasks by dependency
 
-      **IMPORTANT: Follow the template below exactly.** The apply phase parses
+      **TDD discipline (mandatory):**
+      - Each task introducing NEW behavior MUST be preceded by a failing-test task
+      - Pattern: `- [ ] N.X RED — write failing pytest/vitest test for <behavior>`
+        followed by `- [ ] N.X+1 GREEN — minimal impl to pass the test`
+      - Bug fixes MUST be preceded by a regression test that reproduces the bug
 
-      checkbox format to track progress. Tasks not using `- [ ]` won't be
-      tracked.
+      **Review checkpoints (mandatory):**
+      - Each `## N` task group MUST end with:
+        `- [ ] N.Z Run superpowers:requesting-code-review on the diff for group N; address CRITICAL/HIGH findings before moving on`
+      - Final group MUST include:
+        `- [ ] M.K Run superpowers:verification-before-completion`
 
+      **Frontend view sandwich (when applicable):**
+      For each frontend GREEN task implementing a VIEW / MODAL / named LAYOUT
+      component (>50 lines; utility helpers / stores / interceptors are exempt),
+      the GREEN task MUST be sandwiched:
+      - Preceding: `- [ ] N.X MOCK — open docs/superpowers/specs/mocks/<file>.html#<anchor>; note tokens + verbatim strings`
+      - Following: `- [ ] N.X+2 VISUAL DIFF — bring up dev stack; navigate; eyeball against mock; fix drift`
 
-      Guidelines:
+      **Token-locked tests (when applicable):**
+      When a frontend RED test corresponds to a requirement that names design
+      tokens, the test SHALL assert presence via wrapper.classes() — e.g.,
+      `expect(cls).toMatch(/bg-notion-primary/)` — not only data-* selectors.
+      This makes design tokens load-bearing in the test suite.
 
-      - Group related tasks under ## numbered headings
+      **LangGraph rule:** graph tasks MUST test nodes independently (unit)
+      before testing the full graph flow (integration).
 
-      - Each task MUST be a checkbox: `- [ ] X.Y Task description`
-
-      - Tasks should be small enough to complete in one session
-
-      - Order tasks by dependency (what must be done first?)
-
-
-      Example:
-
-      ```
-
-      ## 1. Setup
-
-
-      - [ ] 1.1 Create new module structure
-
-      - [ ] 1.2 Add dependencies to package.json
-
-
-      ## 2. Core Implementation
-
-
-      - [ ] 2.1 Implement data export function
-
-      - [ ] 2.2 Add CSV formatting utilities
-
-      ```
-
-
-      Reference specs for what needs to be built, design for how to build it.
-
-      Each task should be verifiable - you know when it's done.
+      Skill names: when a task should invoke a superpowers skill, name it
+      explicitly (e.g., `Invoke superpowers:test-driven-development to scaffold
+      tests for the new LangGraph node`).
     requires:
       - specs
       - design
