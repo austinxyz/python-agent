@@ -1,6 +1,6 @@
 name: superpowers-driven
 version: 1
-description: Default OpenSpec workflow - proposal → specs → design → tasks
+description: Superpowers OpenSpec workflow - requirements → proposal → specs → mocks → design → tasks
 artifacts:
   - id: requirements
     generates: "../../../docs/superpowers/specs/{{date}}-{{change}}-requirements.md"
@@ -22,6 +22,8 @@ artifacts:
       - Success Criteria: how we know we're done
       - User Stories: who uses this and how
       - Open Questions: unresolved decisions
+      - Referenced Capabilities: link to openspec/specs/<capability>/spec.md
+        SHALL clauses this change adds, modifies, or removes
 
       Reference any relevant SHALL clauses from openspec/specs/<capability>/spec.md.
 
@@ -245,7 +247,8 @@ artifacts:
       - Each `## N` task group MUST end with:
         `- [ ] N.Z Run superpowers:requesting-code-review on the diff for group N; address CRITICAL/HIGH findings before moving on`
       - Final group MUST include:
-        `- [ ] M.K Run superpowers:verification-before-completion`
+        `- [ ] N.Z Run superpowers:verification-before-completion`
+        (N = final group number; Z = last position in that group)
 
       **Frontend view sandwich (when applicable):**
       For each frontend GREEN task implementing a VIEW / MODAL / named LAYOUT

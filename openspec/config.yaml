@@ -66,7 +66,7 @@ context: |
 # Each rule must be a quoted scalar to avoid YAML multi-line ambiguity.
 rules:
   proposal:
-    - "Always include a Non-Goals (or Out-of-Scope) section."
+    - "Always include an `## Out of Scope` section (note: requirements.md uses `## Non-Goals` instead; proposal.md uses `## Out of Scope`)."
     - "Capabilities section MUST list which existing capability is modified. Look in openspec/specs/ first; do not invent capability names."
     - "If the change has visual/UX surface, mention that brainstorming has already produced design mockups under docs/superpowers/specs/2026-05-05-knowledge-agent-design.md."
 

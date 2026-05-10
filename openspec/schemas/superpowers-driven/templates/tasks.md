@@ -22,5 +22,5 @@
 - [ ] 3.1 Run full pytest suite — ensure no regressions
 - [ ] 3.2 Run full vitest suite — ensure no regressions
 - [ ] 3.3 Run Playwright e2e suite (if applicable)
-- [ ] 3.4 Run superpowers:verification-before-completion (cd backend && pytest; cd frontend && npm test; grep -r console.log frontend/src; diff review)
+- [ ] 3.4 Run superpowers:verification-before-completion (cd backend && pytest; cd frontend && npm test; grep -r console.log frontend/src; diff review; grep -rn "search_private\|qdrant.*private" backend/app --include="*.py" | grep -v "user_id" — ensure no Qdrant private query is missing the user_id filter)
 - [ ] 3.5 Final superpowers:requesting-code-review on the entire change diff
