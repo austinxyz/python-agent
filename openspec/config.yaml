@@ -1,4 +1,4 @@
-schema: spec-driven
+schema: superpowers-driven
 
 # Project context — injected into every artifact's instruction prompt.
 context: |
@@ -68,12 +68,9 @@ rules:
   proposal:
     - "Always include a Non-Goals (or Out-of-Scope) section."
     - "Capabilities section MUST list which existing capability is modified. Look in openspec/specs/ first; do not invent capability names."
-    - "Reference the requirement IDs from docs/superpowers/specs/2026-05-05-requirements.md (e.g., CHAT-04, ING-01) that this change addresses."
     - "If the change has visual/UX surface, mention that brainstorming has already produced design mockups under docs/superpowers/specs/2026-05-05-knowledge-agent-design.md."
-    - "If the change adds a new view / modal / layout / sidebar item, proposal.md MUST link the corresponding mock file under docs/superpowers/specs/mocks/<date>-<topic>-mocks.html. If mocks do not yet exist, the proposal MUST require a brainstorming session with visual companion BEFORE implementation begins, or explicitly state 'no visual mocks; design emerges inline (last resort)'."
 
   design:
-    - "Reference the brainstorming spec doc docs/superpowers/specs/2026-05-05-knowledge-agent-design.md as primary input when relevant."
     - "Decisions section MUST cover alternatives considered, not just the choice made."
     - "For any Qdrant query change: explicitly state whether user_id filter is applied and why."
     - "For any SSE/streaming change: describe the event format (type field + payload) and the terminal event."
@@ -81,13 +78,3 @@ rules:
 
   specs:
     - "When a requirement describes a UI element (view / modal / layout component / sidebar item), the requirement text SHALL name the specific Notion design tokens it uses (e.g., bg-notion-brand-navy, text-notion-error, bg-notion-tint-lavender) and any verbatim user-facing text strings (CTA labels, error messages, banners). Tests SHALL assert these via wrapper.classes() / wrapper.text(), not only data-* selectors. Token names — not pixel measurements — are the lock-down level."
-
-  tasks:
-    - "Each implementation task that introduces NEW behavior MUST be preceded by a RED-failing-test task. Pattern: '- [ ] N.X RED — write failing pytest test for <behavior>' followed by '- [ ] N.X+1 GREEN — minimal impl to pass the test'. Use vitest for Vue components/stores/api, pytest for Flask routes/services/graphs."
-    - "Bug fixes MUST be preceded by a regression test that reproduces the bug (RED), then the fix (GREEN)."
-    - "Each '## N' task group MUST end with a checkpoint task: '- [ ] N.Z Run superpowers:requesting-code-review on the diff for group N; address CRITICAL/HIGH findings before moving on'."
-    - "The final task group MUST include a verification task: '- [ ] M.K Run superpowers:verification-before-completion (cd backend && pytest; cd frontend && npm test; grep -r console.log frontend/src; diff review); ensure no user_id filter is missing from private collection queries'."
-    - "Tasks SHOULD explicitly name the superpowers skill to invoke when relevant (e.g., 'Invoke superpowers:test-driven-development to scaffold tests for the new LangGraph node')."
-    - "LangGraph graph tasks MUST test nodes independently (unit) before testing the full graph flow (integration)."
-    - "For each frontend GREEN task that implements a VIEW, MODAL, or named LAYOUT component (>50 lines; utility helpers / stores / interceptors are exempt), the GREEN task MUST be sandwiched: (a) a preceding MOCK task — '- [ ] N.X MOCK — open docs/superpowers/specs/mocks/<file>.html#<anchor>; note the Notion tokens used (bg-notion-*, text-notion-*) and the verbatim text strings'; and (b) a following VISUAL DIFF task — '- [ ] N.X+2 VISUAL DIFF — bring up dev stack (npm run dev:up), navigate to the route, eyeball rendered UI against the mock; fix any token/color/text drift BEFORE the group's code-review checkpoint'."
-    - "When a frontend RED test corresponds to a requirement that names design tokens (per the specs rule above), the test SHALL assert presence via wrapper.classes() — e.g., expect(cls).toMatch(/bg-notion-primary/) — not only data-* selectors. This makes design tokens load-bearing in the test suite."
