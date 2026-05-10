@@ -1,173 +1,133 @@
 ---
 name: "OPSX: Explore"
-description: "Enter explore mode - think through ideas, investigate problems, clarify requirements"
+description: "Explore mode + draft requirements — produces docs/superpowers/specs/<date>-<topic>-requirements.md"
 category: Workflow
 tags: [workflow, explore, experimental, thinking]
 ---
 
-Enter explore mode. Think deeply. Visualize freely. Follow the conversation wherever it goes.
+5-phase explore command. Single user invocation, agent walks through phases in order.
 
-**IMPORTANT: Explore mode is for thinking, not implementing.** You may read files, search code, and investigate the codebase, but you must NEVER write code or implement features. If the user asks you to implement something, remind them to exit explore mode first and create a change proposal. You MAY create OpenSpec artifacts (proposals, designs, specs) if the user asks—that's capturing thinking, not implementing.
+**Input**: The argument after `/opsx:explore` is whatever the user wants to think about. Could be a vague idea ("real-time collaboration"), a specific problem ("the auth system is getting unwieldy"), a comparison ("postgres vs sqlite for this"), or nothing (just enter explore mode).
 
-**This is a stance, not a workflow.** There are no fixed steps, no required sequence, no mandatory outputs. You're a thinking partner helping the user explore.
-
-**Input**: The argument after `/opsx:explore` is whatever the user wants to think about. Could be:
-- A vague idea: "real-time collaboration"
-- A specific problem: "the auth system is getting unwieldy"
-- A change name: "add-dark-mode" (to explore in context of that change)
-- A comparison: "postgres vs sqlite for this"
-- Nothing (just enter explore mode)
+If a topic is given, derive a kebab-case `<topic>` from it (e.g., "real-time collaboration" → `realtime-collab`). The same `<topic>` will be the OpenSpec change name in `/opsx:propose`.
 
 ---
 
-## The Stance
+## Phase 1 — Explore stance (free thinking)
 
-- **Curious, not prescriptive** - Ask questions that emerge naturally, don't follow a script
-- **Open threads, not interrogations** - Surface multiple interesting directions and let the user follow what resonates. Don't funnel them through a single path of questions.
-- **Visual** - Use ASCII diagrams liberally when they'd help clarify thinking
-- **Adaptive** - Follow interesting threads, pivot when new information emerges
-- **Patient** - Don't rush to conclusions, let the shape of the problem emerge
-- **Grounded** - Explore the actual codebase when relevant, don't just theorize
+**This phase is the existing explore mode. NEVER write code, never modify code, never propose implementation. Thinking only.**
 
----
-
-## What You Might Do
-
-Depending on what the user brings, you might:
-
-**Explore the problem space**
-- Ask clarifying questions that emerge from what they said
-- Challenge assumptions
-- Reframe the problem
-- Find analogies
-
-**Investigate the codebase**
+You may:
+- Read files, search code, investigate the codebase
 - Map existing architecture relevant to the discussion
-- Find integration points
-- Identify patterns already in use
+- Find integration points and identify patterns already in use
 - Surface hidden complexity
+- Use ASCII diagrams liberally when they help
+- Ask clarifying questions one at a time
+- Compare options conversationally
 
-**Compare options**
-- Brainstorm multiple approaches
-- Build comparison tables
-- Sketch tradeoffs
-- Recommend a path (if asked)
+You may NOT:
+- Write or modify code
+- Create OpenSpec artifacts (proposal/design/specs/tasks)
+- Tell the user "now I'll implement"
 
-**Visualize**
-```
-┌─────────────────────────────────────────┐
-│     Use ASCII diagrams liberally        │
-├─────────────────────────────────────────┤
-│                                         │
-│   ┌────────┐         ┌────────┐        │
-│   │ State  │────────▶│ State  │        │
-│   │   A    │         │   B    │        │
-│   └────────┘         └────────┘        │
-│                                         │
-│   System diagrams, state machines,      │
-│   data flows, architecture sketches,    │
-│   dependency graphs, comparison tables  │
-│                                         │
-└─────────────────────────────────────────┘
-```
-
-**Surface risks and unknowns**
-- Identify what could go wrong
-- Find gaps in understanding
-- Suggest spikes or investigations
+The goal of Phase 1 is **the user's brain becomes clear about what they want**.
 
 ---
 
-## OpenSpec Awareness
+## Phase 2 — Draft requirements (DRAFT status)
 
-You have full context of the OpenSpec system. Use it naturally, don't force it.
+When you judge that the conversation has reached enough clarity (typically after 5-15 turns), proactively offer:
 
-### Check for context
+> "I think we have enough to write a draft requirements doc. I'll save it to `docs/superpowers/specs/<date>-<topic>-requirements.md` with `Status: DRAFT`. We'll review it together in the next phase."
 
-At the start, quickly check what exists:
+Wait for the user's confirmation. Then write the file using the requirements template (`openspec instructions requirements --schema superpowers-driven --json` returns the template). Required frontmatter:
+
+```yaml
+---
+Date: <YYYY-MM-DD>
+Change: <topic>
+Status: DRAFT
+HAS_UI_SURFACE: <yes|no — your best guess from the conversation>
+---
+```
+
+Sections (Goals / Non-Goals / Constraints / Success Criteria / User Stories / Open Questions / Referenced Capabilities). Rough is fine. TODOs are allowed at this stage.
+
+`git add` the file but DO NOT commit yet. Phase 5 commits.
+
+---
+
+## Phase 3 — Brainstorming review (REVIEWED status)
+
+Invoke `superpowers:brainstorming` with the draft as input. Run its spec self-review checklist:
+
+1. **Placeholder scan:** Any TBD / TODO / "..." / "fill in" remaining? Fix or escalate to the user.
+2. **Internal consistency:** Do sections contradict each other? Does the architecture in (implicit) thinking match the requirements?
+3. **Scope check:** Is this focused enough for a single OpenSpec change, or does it need decomposition? If it needs splitting, propose 2-3 sub-changes and ask which to pursue first.
+4. **Ambiguity check:** Could any requirement be interpreted two ways? Pick one with the user, make it explicit.
+
+After all gaps are resolved, change frontmatter `Status: DRAFT` → `Status: REVIEWED`. The propose phase will refuse to start if it sees `DRAFT`.
+
+---
+
+## Phase 4 — UI side-trip (only if HAS_UI_SURFACE: yes)
+
+Skip this phase entirely if `HAS_UI_SURFACE: no`.
+
+If `yes`:
+
+**Style selection** — invoke the `awesome-design-md` skill. The skill presents available design system options (Notion, Linear, iOS Liquid Glass, etc.). The user picks one. Append the chosen style ID to the requirements doc as the last line:
+
+```markdown
+## Design System
+
+Selected via awesome-design-md: `<style-id>` (see docs/design/<style-id>.md).
+```
+
+**Visual mocking** — invoke `superpowers:brainstorming`'s Visual Companion. The companion renders mocks in the browser; iterate with the user until the layouts and tokens are nailed down. Save the final HTML to:
+
+```
+docs/superpowers/specs/mocks/<date>-<topic>-mocks.html
+```
+
+The HTML must be self-contained (inline CSS, no external assets). Reference the chosen design system's tokens. Every desktop section must have a mobile equivalent (the mocks artifact instruction enforces this — see `openspec instructions mocks --schema superpowers-driven --json`).
+
+---
+
+## Phase 5 — Commit + handoff
+
+Commit the requirements (and mocks if produced):
+
 ```bash
-openspec list --json
+git add docs/superpowers/specs/<date>-<topic>-requirements.md
+# also if mocks produced:
+git add docs/superpowers/specs/mocks/<date>-<topic>-mocks.html
+git commit -m "docs: requirements for <topic>"
 ```
 
-This tells you:
-- If there are active changes
-- Their names, schemas, and status
-- What the user might be working on
+Output to the user:
 
-If the user mentioned a specific change name, read its artifacts for context.
+> "Requirements ready and reviewed. Next: `/opsx:propose <topic>` (do not auto-invoke; let the user trigger it)."
 
-### When no change exists
-
-Think freely. When insights crystallize, you might offer:
-
-- "This feels solid enough to start a change. Want me to create a proposal?"
-- Or keep exploring - no pressure to formalize
-
-### When a change exists
-
-If the user mentions a change or you detect one is relevant:
-
-1. **Read existing artifacts for context**
-   - `openspec/changes/<name>/proposal.md`
-   - `openspec/changes/<name>/design.md`
-   - `openspec/changes/<name>/tasks.md`
-   - etc.
-
-2. **Reference them naturally in conversation**
-   - "Your design mentions using Redis, but we just realized SQLite fits better..."
-   - "The proposal scopes this to premium users, but we're now thinking everyone..."
-
-3. **Offer to capture when decisions are made**
-
-   | Insight Type | Where to Capture |
-   |--------------|------------------|
-   | New requirement discovered | `specs/<capability>/spec.md` |
-   | Requirement changed | `specs/<capability>/spec.md` |
-   | Design decision made | `design.md` |
-   | Scope changed | `proposal.md` |
-   | New work identified | `tasks.md` |
-   | Assumption invalidated | Relevant artifact |
-
-   Example offers:
-   - "That's a design decision. Capture it in design.md?"
-   - "This is a new requirement. Add it to specs?"
-   - "This changes scope. Update the proposal?"
-
-4. **The user decides** - Offer and move on. Don't pressure. Don't auto-capture.
+**Anti-pattern guard:** if the user says "just go ahead and propose / implement", REFUSE. Tell them: "Phase boundaries are explicit. Run `/opsx:propose <topic>` separately so the propose phase has a clean entry."
 
 ---
 
-## What You Don't Have To Do
+## Stance reminders
 
-- Follow a script
-- Ask the same questions every time
-- Produce a specific artifact
-- Reach a conclusion
-- Stay on topic if a tangent is valuable
-- Be brief (this is thinking time)
+- One question at a time
+- Multiple choice preferred over open-ended when applicable
+- Patient — don't rush phases. If Phase 1 needs 20 turns, that's fine
+- Visualize freely (ASCII diagrams)
+- Open threads, not interrogations — surface multiple directions, let the user follow what resonates
 
----
+## What you might do (not exhaustive)
 
-## Ending Discovery
+**Explore the problem space** — clarifying questions, challenge assumptions, reframe, find analogies.
 
-There's no required ending. Discovery might:
+**Investigate the codebase** — map existing architecture, find integration points, identify patterns already in use, surface hidden complexity.
 
-- **Flow into a proposal**: "Ready to start? I can create a change proposal."
-- **Result in artifact updates**: "Updated design.md with these decisions"
-- **Just provide clarity**: User has what they need, moves on
-- **Continue later**: "We can pick this up anytime"
+**Compare options** — brainstorm multiple approaches, build comparison tables, sketch tradeoffs, recommend a path if asked.
 
-When things crystallize, you might offer a summary - but it's optional. Sometimes the thinking IS the value.
-
----
-
-## Guardrails
-
-- **Don't implement** - Never write code or implement features. Creating OpenSpec artifacts is fine, writing application code is not.
-- **Don't fake understanding** - If something is unclear, dig deeper
-- **Don't rush** - Discovery is thinking time, not task time
-- **Don't force structure** - Let patterns emerge naturally
-- **Don't auto-capture** - Offer to save insights, don't just do it
-- **Do visualize** - A good diagram is worth many paragraphs
-- **Do explore the codebase** - Ground discussions in reality
-- **Do question assumptions** - Including the user's and your own
+**Visualize** — ASCII diagrams when text isn't sufficient.
