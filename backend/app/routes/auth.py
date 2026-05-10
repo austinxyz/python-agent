@@ -33,6 +33,17 @@ MIN_PASSWORD_LEN = 8
 # ---------------------------------------------------------------------------
 
 
+def _safe_picture_url(value):
+    """Allow only https:// URLs as picture_url so the frontend can render it
+    via <img src> without XSS risk. Anything else (None, javascript:, data:,
+    arbitrary http://) collapses to None and the UI falls back to an initial
+    avatar. Surfaced by code review on 2026-05-10.
+    """
+    if isinstance(value, str) and value.startswith("https://"):
+        return value
+    return None
+
+
 def _user_response(user) -> dict:
     """Strip private fields (password_hash) from user dict/namespace before
     returning. Accepts either a dict (from user_service) or SimpleNamespace
@@ -47,7 +58,7 @@ def _user_response(user) -> dict:
         "id": getitem("id"),
         "email": getitem("email"),
         "name": get("name"),
-        "picture_url": get("picture_url"),
+        "picture_url": _safe_picture_url(get("picture_url")),
         "role": getitem("role"),
     }
 
@@ -209,7 +220,7 @@ def invite_info(token: str):
                 inviter = {
                     "email": inviter_row["email"],
                     "name": inviter_row.get("name"),
-                    "picture_url": inviter_row.get("picture_url"),
+                    "picture_url": _safe_picture_url(inviter_row.get("picture_url")),
                 }
 
         return jsonify(
@@ -220,7 +231,7 @@ def invite_info(token: str):
                     {
                         "email": user["email"],
                         "name": user.get("name"),
-                        "picture_url": user.get("picture_url"),
+                        "picture_url": _safe_picture_url(user.get("picture_url")),
                     }
                     if user
                     else None

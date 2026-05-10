@@ -20,14 +20,24 @@ logger = logging.getLogger(__name__)
 INVITE_TOKEN_TTL_DAYS = 7
 
 
+_ISO_FMT = "%Y-%m-%dT%H:%M:%SZ"
+
+
 def _now_iso() -> str:
-    return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    return datetime.now(timezone.utc).strftime(_ISO_FMT)
 
 
 def _expiry_iso(days: int = INVITE_TOKEN_TTL_DAYS) -> str:
-    return (datetime.now(timezone.utc) + timedelta(days=days)).strftime(
-        "%Y-%m-%dT%H:%M:%SZ"
-    )
+    return (datetime.now(timezone.utc) + timedelta(days=days)).strftime(_ISO_FMT)
+
+
+def _parse_iso(s: str) -> datetime:
+    """Parse the strict ISO-8601 form we write via _now_iso/_expiry_iso back
+    to a tz-aware datetime. Raises ValueError on any other format — better to
+    surface a bad row than silently mis-compare lexicographically (surfaced
+    by code review on 2026-05-10).
+    """
+    return datetime.strptime(s, _ISO_FMT).replace(tzinfo=timezone.utc)
 
 
 def _new_uuid() -> str:
@@ -128,7 +138,7 @@ def is_token_valid(token_row: dict) -> tuple[bool, bool]:
         return (False, False)
     if token_row["used_at"] is not None:
         return (False, False)
-    if token_row["expires_at"] < _now_iso():
+    if _parse_iso(token_row["expires_at"]) < datetime.now(timezone.utc):
         return (False, True)
     return (True, False)
 

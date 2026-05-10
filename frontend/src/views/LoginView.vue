@@ -89,6 +89,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth.js'
+import { safeRedirect } from '../utils/safe-redirect.js'
 
 const route = useRoute()
 const router = useRouter()
@@ -123,8 +124,7 @@ async function onSubmit() {
   submitting.value = true
   try {
     await auth.loginWithPassword(email.value.trim(), password.value)
-    const redirect = typeof route.query.redirect === 'string' ? route.query.redirect : '/chat'
-    router.push(redirect)
+    router.push(safeRedirect(route.query.redirect))
   } catch (err) {
     errorText.value = err?.response?.data?.error ?? err?.message ?? '登录失败'
   } finally {
