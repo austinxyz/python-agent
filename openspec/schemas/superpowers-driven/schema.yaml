@@ -169,6 +169,26 @@ artifacts:
       Specs should be testable - each scenario is a potential test case.
     requires:
       - proposal
+  - id: mocks
+    generates: "../../../docs/superpowers/specs/mocks/{{date}}-{{change}}-mocks.html"
+    description: HTML mocks for UI changes; 1-line stub for backend-only changes
+    template: mocks.html
+    instruction: |
+      Self-contained HTML — open in browser, no server needed.
+
+      Read proposal.md frontmatter HAS_UI_SURFACE field:
+      - HAS_UI_SURFACE: yes → produce real mocks (one <section> per UI flow,
+        plus mobile equivalent). Reference design tokens from the design system
+        chosen via awesome-design-md (e.g., docs/design/notion.md if Notion).
+        Lock-down level is design tokens (e.g., bg-notion-brand-navy) and
+        verbatim text strings, NOT pixel measurements.
+      - HAS_UI_SURFACE: no → write the stub form (see template).
+
+      File MUST be self-contained: inline <style>, no external CSS or JS.
+      Do not embed images via http:// — use SVG or omit.
+    requires:
+      - proposal
+      - specs
   - id: design
     generates: design.md
     description: Technical design document with implementation details
@@ -267,6 +287,7 @@ artifacts:
     requires:
       - specs
       - design
+      - mocks
 apply:
   requires:
     - tasks
