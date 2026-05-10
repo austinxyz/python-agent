@@ -27,7 +27,7 @@ def app():
     @app.get("/protected")
     @require_auth
     def protected():
-        return jsonify({"user_id": g.user["id"], "status": g.user["status"]})
+        return jsonify({"user_id": g.user.id, "status": g.user.status})
 
     return app
 

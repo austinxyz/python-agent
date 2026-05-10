@@ -4,10 +4,11 @@ import sqlite3
 import uuid
 from typing import Any
 
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, g, jsonify, request
 from qdrant_client.http import models as qmodels
 
 from app.graphs.text_chunker import chunk_text
+from app.middleware import require_auth
 from app.routes.private_templates import (
     PRIVATE_TEMPLATES,
     VALID_TEMPLATE_TYPES,
@@ -20,7 +21,8 @@ from app.services.qdrant_service import QdrantService
 
 private_bp = Blueprint("private", __name__)
 
-_USER_ID = "default"  # V1: single-tenant
+# All route handlers in this blueprint use @require_auth and g.user.id;
+# the legacy hardcoded user_id="default" was removed in multi-user-auth-core.
 
 
 def _row_to_entry(row: sqlite3.Row) -> dict[str, Any]:
@@ -68,7 +70,7 @@ def _chunked_points_for(
                 id=str(uuid.uuid4()),
                 vector=vector,
                 payload={
-                    "user_id": _USER_ID,
+                    "user_id": g.user.id,
                     "template_type": template_type,
                     "title": title,
                     "directory": directory,
@@ -97,16 +99,19 @@ def _coerce_content_json(value: Any) -> dict[str, Any]:
 
 
 @private_bp.get("", strict_slashes=False)
+@require_auth
 def index():
     return jsonify({"status": "ok", "stub": True})
 
 
 @private_bp.get("/templates", strict_slashes=False)
+@require_auth
 def list_templates():
     return jsonify(PRIVATE_TEMPLATES)
 
 
 @private_bp.get("/entries", strict_slashes=False)
+@require_auth
 def list_entries():
     db = DatabaseService()
     with db.connection() as conn:
@@ -117,12 +122,13 @@ def list_entries():
             WHERE user_id = ?
             ORDER BY created_at DESC, id DESC
             """,
-            (_USER_ID,),
+            (g.user.id,),
         ).fetchall()
     return jsonify([_row_to_entry(r) for r in rows])
 
 
 @private_bp.post("/entries", strict_slashes=False)
+@require_auth
 def create_entry():
     payload = request.get_json(silent=True) or {}
     template_type = (payload.get("template_type") or "").strip()
@@ -159,12 +165,12 @@ def create_entry():
             INSERT INTO private_entries (id, user_id, template_type, title, content_json, directory)
             VALUES (?, ?, ?, ?, ?, ?)
             """,
-            (entry_id, _USER_ID, template_type, title, json.dumps(content_json, ensure_ascii=False), directory),
+            (entry_id, g.user.id, template_type, title, json.dumps(content_json, ensure_ascii=False), directory),
         )
         row = conn.execute(
             "SELECT id, template_type, title, content_json, directory, created_at, updated_at"
             " FROM private_entries WHERE id = ? AND user_id = ?",
-            (entry_id, _USER_ID),
+            (entry_id, g.user.id),
         ).fetchone()
 
     points = _chunked_points_for(
@@ -181,6 +187,7 @@ def create_entry():
 
 
 @private_bp.put("/entries/<entry_id>", strict_slashes=False)
+@require_auth
 def update_entry(entry_id: str):
     payload = request.get_json(silent=True) or {}
 
@@ -189,7 +196,7 @@ def update_entry(entry_id: str):
         existing = conn.execute(
             "SELECT id, template_type, title, content_json, directory FROM private_entries"
             " WHERE id = ? AND user_id = ?",
-            (entry_id, _USER_ID),
+            (entry_id, g.user.id),
         ).fetchone()
         if existing is None:
             return jsonify({"error": "entry not found"}), 404
@@ -223,12 +230,12 @@ def update_entry(entry_id: str):
                 updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
             WHERE id = ? AND user_id = ?
             """,
-            (new_title, json.dumps(new_content, ensure_ascii=False), new_directory, entry_id, _USER_ID),
+            (new_title, json.dumps(new_content, ensure_ascii=False), new_directory, entry_id, g.user.id),
         )
         row = conn.execute(
             "SELECT id, template_type, title, content_json, directory, created_at, updated_at"
             " FROM private_entries WHERE id = ? AND user_id = ?",
-            (entry_id, _USER_ID),
+            (entry_id, g.user.id),
         ).fetchone()
 
     # Refresh embedding only after SQLite commit succeeds. Chunked update
@@ -237,7 +244,7 @@ def update_entry(entry_id: str):
     # payload.source_file_id == entry_id) so cleanup is uniform.
     text = derive_text_for_embedding(template_type, new_title, new_content)
     qdrant = QdrantService()
-    qdrant.delete_private_by_source_file_id(_USER_ID, entry_id)
+    qdrant.delete_private_by_source_file_id(g.user.id, entry_id)
     points = _chunked_points_for(
         entry_id=entry_id,
         template_type=template_type,
@@ -252,26 +259,27 @@ def update_entry(entry_id: str):
 
 
 @private_bp.delete("/entries/<entry_id>", strict_slashes=False)
+@require_auth
 def delete_entry(entry_id: str):
     db = DatabaseService()
     with db.connection() as conn:
         existing = conn.execute(
             "SELECT id FROM private_entries WHERE id = ? AND user_id = ?",
-            (entry_id, _USER_ID),
+            (entry_id, g.user.id),
         ).fetchone()
         if existing is None:
             return jsonify({"error": "entry not found"}), 404
 
         conn.execute(
             "DELETE FROM private_entries WHERE id = ? AND user_id = ?",
-            (entry_id, _USER_ID),
+            (entry_id, g.user.id),
         )
 
     # Drop every chunk only after SQLite has committed. Filter-based
     # delete cleans up both new chunked entries (multiple points sharing
     # source_file_id) and legacy single-point entries (1 point whose
     # payload.source_file_id == entry_id).
-    QdrantService().delete_private_by_source_file_id(_USER_ID, entry_id)
+    QdrantService().delete_private_by_source_file_id(g.user.id, entry_id)
 
     return jsonify({"ok": True}), 200
 
@@ -317,6 +325,7 @@ def _build_tree(notes: list[dict[str, Any]]) -> dict[str, Any]:
 
 
 @private_bp.get("/notes", strict_slashes=False)
+@require_auth
 def list_notes():
     db = DatabaseService()
     with db.connection() as conn:
@@ -327,13 +336,14 @@ def list_notes():
             WHERE user_id = ?
             ORDER BY created_at DESC, id DESC
             """,
-            (_USER_ID,),
+            (g.user.id,),
         ).fetchall()
     notes = [_row_to_note(r) for r in rows]
     return jsonify({"notes": notes, "tree": _build_tree(notes)})
 
 
 @private_bp.post("/notes", strict_slashes=False)
+@require_auth
 def create_note():
     payload = request.get_json(silent=True) or {}
     title = (payload.get("title") or "").strip()
@@ -361,7 +371,7 @@ def create_note():
             INSERT INTO notes (id, user_id, title, directory, content, chat_ref)
             VALUES (?, ?, ?, ?, ?, ?)
             """,
-            (note_id, _USER_ID, title, directory, content, chat_ref),
+            (note_id, g.user.id, title, directory, content, chat_ref),
         )
         row = conn.execute(
             "SELECT id, title, directory, content, chat_ref, created_at, updated_at"
@@ -372,13 +382,14 @@ def create_note():
 
 
 @private_bp.put("/notes/<note_id>", strict_slashes=False)
+@require_auth
 def update_note(note_id: str):
     payload = request.get_json(silent=True) or {}
     db = DatabaseService()
     with db.connection() as conn:
         existing = conn.execute(
             "SELECT id, title, directory, content FROM notes WHERE id = ? AND user_id = ?",
-            (note_id, _USER_ID),
+            (note_id, g.user.id),
         ).fetchone()
         if existing is None:
             return jsonify({"error": "note not found"}), 404
@@ -404,7 +415,7 @@ def update_note(note_id: str):
                 updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
             WHERE id = ? AND user_id = ?
             """,
-            (new_title, new_directory, new_content, note_id, _USER_ID),
+            (new_title, new_directory, new_content, note_id, g.user.id),
         )
         row = conn.execute(
             "SELECT id, title, directory, content, chat_ref, created_at, updated_at"
@@ -415,18 +426,19 @@ def update_note(note_id: str):
 
 
 @private_bp.delete("/notes/<note_id>", strict_slashes=False)
+@require_auth
 def delete_note(note_id: str):
     db = DatabaseService()
     with db.connection() as conn:
         existing = conn.execute(
             "SELECT id FROM notes WHERE id = ? AND user_id = ?",
-            (note_id, _USER_ID),
+            (note_id, g.user.id),
         ).fetchone()
         if existing is None:
             return jsonify({"error": "note not found"}), 404
         conn.execute(
             "DELETE FROM notes WHERE id = ? AND user_id = ?",
-            (note_id, _USER_ID),
+            (note_id, g.user.id),
         )
     # Notes are SQLite-only — Qdrant is intentionally NOT touched.
     return jsonify({"ok": True}), 200

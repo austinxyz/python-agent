@@ -2,6 +2,7 @@ import sqlite3
 
 from flask import Blueprint, jsonify, request
 
+from app.middleware import require_auth
 from app.services.db_service import DatabaseService
 from app.services.qdrant_service import QdrantService
 
@@ -25,6 +26,7 @@ def _row_to_entry(row: sqlite3.Row) -> dict:
 
 
 @wiki_bp.get("/tree", strict_slashes=False)
+@require_auth
 def get_tree():
     try:
         domain_to_file_ids = QdrantService().get_tree()
@@ -53,6 +55,7 @@ def get_tree():
 
 
 @wiki_bp.get("", strict_slashes=False)
+@require_auth
 def list_entries():
     domain = request.args.get("domain")
     db = DatabaseService()
@@ -70,6 +73,7 @@ def list_entries():
 
 
 @wiki_bp.get("/<file_id>", strict_slashes=False)
+@require_auth
 def get_entry(file_id: str):
     db = DatabaseService()
     with db.connection() as conn:

@@ -1,5 +1,6 @@
-from flask import Blueprint, jsonify, send_file, abort, request
+from flask import Blueprint, g, jsonify, send_file, abort, request
 
+from app.middleware import require_auth
 from app.services.db_service import DatabaseService
 from app.services.file_service import FileService
 
@@ -7,8 +8,9 @@ files_bp = Blueprint("files", __name__)
 
 
 @files_bp.get("", strict_slashes=False)
+@require_auth
 def list_files():
-    user_id = "default"
+    user_id = g.user.id
     db = DatabaseService()
     with db.connection() as conn:
         rows = conn.execute(
@@ -25,8 +27,9 @@ def list_files():
 
 
 @files_bp.patch("/<file_id>", strict_slashes=False)
+@require_auth
 def update_file_title(file_id: str):
-    user_id = "default"
+    user_id = g.user.id
     data = request.get_json(silent=True) or {}
     if "title" not in data:
         abort(400)
@@ -46,6 +49,7 @@ def update_file_title(file_id: str):
 
 
 @files_bp.get("/<file_id>/download", strict_slashes=False)
+@require_auth
 def download_file(file_id: str):
     db = DatabaseService()
     with db.connection() as conn:
@@ -65,6 +69,7 @@ def download_file(file_id: str):
 
 
 @files_bp.get("/<file_id>/content", strict_slashes=False)
+@require_auth
 def view_file(file_id: str):
     db = DatabaseService()
     with db.connection() as conn:

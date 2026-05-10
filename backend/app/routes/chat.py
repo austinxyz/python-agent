@@ -9,16 +9,16 @@ import threading
 import uuid
 from typing import Any
 
-from flask import Blueprint, Response, jsonify, request, stream_with_context
+from flask import Blueprint, Response, g, jsonify, request, stream_with_context
 
 from app.graphs.qa_agent import run_agent, stream_response
+from app.middleware import require_auth
 from app.services.db_service import DatabaseService
 
 logger = logging.getLogger(__name__)
 
 chat_bp = Blueprint("chat", __name__)
 
-_USER_ID = "default"  # V1 single-tenant
 _TITLE_MAX_LEN = 60
 
 
@@ -64,6 +64,7 @@ def _load_history(conn: sqlite3.Connection, session_id: str) -> list[dict[str, s
 
 
 @chat_bp.post("", strict_slashes=False)
+@require_auth
 def post_chat():
     payload = request.get_json(silent=True) or {}
     query = (payload.get("query") or "").strip()
@@ -85,7 +86,7 @@ def post_chat():
         if incoming_session_id:
             row = conn.execute(
                 "SELECT id FROM chat_sessions WHERE id = ? AND user_id = ?",
-                (incoming_session_id, _USER_ID),
+                (incoming_session_id, g.user.id),
             ).fetchone()
             if row is None:
                 return jsonify({"error": "session not found"}), 404
@@ -96,7 +97,7 @@ def post_chat():
             conn.execute(
                 "INSERT INTO chat_sessions (id, user_id, title, model)"
                 " VALUES (?, ?, ?, ?)",
-                (session_id, _USER_ID, _truncate_title(query), model),
+                (session_id, g.user.id, _truncate_title(query), model),
             )
 
         user_msg_id = str(uuid.uuid4())
@@ -180,25 +181,27 @@ def post_chat():
 
 
 @chat_bp.get("/sessions", strict_slashes=False)
+@require_auth
 def list_sessions():
     db = DatabaseService()
     with db.connection() as conn:
         rows = conn.execute(
             "SELECT id, title, model, created_at FROM chat_sessions"
             " WHERE user_id = ? ORDER BY created_at DESC, id DESC",
-            (_USER_ID,),
+            (g.user.id,),
         ).fetchall()
     return jsonify([_row_to_session(r) for r in rows])
 
 
 @chat_bp.get("/sessions/<session_id>", strict_slashes=False)
+@require_auth
 def get_session(session_id: str):
     db = DatabaseService()
     with db.connection() as conn:
         srow = conn.execute(
             "SELECT id, title, model, created_at FROM chat_sessions"
             " WHERE id = ? AND user_id = ?",
-            (session_id, _USER_ID),
+            (session_id, g.user.id),
         ).fetchone()
         if srow is None:
             return jsonify({"error": "session not found"}), 404

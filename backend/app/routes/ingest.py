@@ -2,9 +2,10 @@ import re
 import threading
 import uuid
 
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, g, jsonify, request
 
 from app.graphs.ingest_pipeline import IngestPipeline
+from app.middleware import require_auth
 from app.services.job_registry import JobRegistry
 
 ingest_bp = Blueprint("ingest", __name__)
@@ -17,6 +18,7 @@ _UUID_RE = re.compile(r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f
 
 
 @ingest_bp.post("", strict_slashes=False)
+@require_auth
 def ingest_post():
     source_type = request.form.get("source_type", "").strip()
     if not source_type:
@@ -47,7 +49,7 @@ def ingest_post():
     domain = request.form.get("domain", "general").strip()
     topic = request.form.get("topic", "general").strip()
     title = request.form.get("title") or None
-    user_id = "default"  # V1: single-tenant, no auth
+    user_id = g.user.id
 
     job_id = str(uuid.uuid4())
     file_id = str(uuid.uuid4())
@@ -87,6 +89,7 @@ def ingest_post():
 
 
 @ingest_bp.get("/status/<job_id>", strict_slashes=False)
+@require_auth
 def ingest_status(job_id: str):
     if not _UUID_RE.match(job_id):
         return jsonify({"error": "invalid job_id format"}), 400
