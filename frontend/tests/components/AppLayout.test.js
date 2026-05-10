@@ -40,18 +40,17 @@ describe('AppLayout — responsive shape', () => {
     expect(cls).toMatch(/hidden md:flex|md:flex/)
   })
 
-  it('renders bottom tab nav with 4 items, only visible at md-', async () => {
+  it('renders bottom tab nav with 5 items (the 5th is 我), only visible at md-', async () => {
+    // multi-user-auth-core: 5th tab "我" added for user/profile menu.
     const wrapper = await mountLayout()
     const bottomNav = wrapper.find('[data-bottom-tabs]')
     expect(bottomNav.exists()).toBe(true)
     const cls = bottomNav.classes().join(' ')
-    // Bottom tabs are mobile-only: visible at md-, hidden at md+.
     expect(cls).toMatch(/md:hidden/)
-    // 4 tab items.
     const tabs = bottomNav.findAll('a')
-    expect(tabs.length).toBe(4)
+    expect(tabs.length).toBe(5)
     const text = bottomNav.text()
-    for (const label of ['知识库', '摄入', '对话', '私有']) {
+    for (const label of ['知识库', '摄入', '对话', '私有', '我']) {
       expect(text).toContain(label)
     }
   })

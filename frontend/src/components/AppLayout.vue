@@ -7,6 +7,46 @@
         isCollapsed ? 'w-16' : 'w-56'
       ]"
     >
+      <!-- User pill at TOP (growing-style) -->
+      <div data-user-pill class="border-b border-notion-hairline p-3">
+        <!-- Logged-out state -->
+        <div v-if="!auth.currentUser" :class="isCollapsed ? 'flex justify-center' : 'flex items-center gap-2 p-2 bg-notion-canvas border border-notion-hairline rounded-md'">
+          <div class="w-7 h-7 rounded-full bg-notion-hairline text-notion-stone flex items-center justify-center text-[12px]">?</div>
+          <template v-if="!isCollapsed">
+            <div class="flex-1 text-[11px] text-notion-slate">未登录</div>
+            <router-link
+              data-user-pill-login
+              to="/login"
+              class="bg-notion-primary text-notion-on-primary text-[11px] font-medium px-2.5 py-1 rounded"
+            >登录</router-link>
+          </template>
+        </div>
+        <!-- Logged-in state -->
+        <div v-else :class="isCollapsed ? 'flex justify-center' : 'flex items-center gap-2 p-2 bg-notion-canvas border border-notion-hairline rounded-md'">
+          <div class="w-7 h-7 rounded-full bg-notion-primary text-notion-on-primary flex items-center justify-center text-[12px] font-semibold flex-shrink-0">
+            <img v-if="auth.currentUser.picture_url" :src="auth.currentUser.picture_url" class="w-full h-full rounded-full object-cover" :alt="userInitial" />
+            <span v-else>{{ userInitial }}</span>
+          </div>
+          <template v-if="!isCollapsed">
+            <div class="flex-1 min-w-0">
+              <div class="text-[11px] font-medium text-notion-ink flex items-center gap-1">
+                <span class="truncate">{{ displayName }}</span>
+                <span v-if="auth.currentUser.role === 'admin'" data-user-pill-admin-badge class="bg-notion-tint-lavender text-notion-brand-purple-800 text-[8px] px-1.5 py-0.5 rounded">admin</span>
+              </div>
+              <div class="text-[10px] text-notion-steel truncate">{{ auth.currentUser.email }}</div>
+            </div>
+            <button
+              data-user-pill-logout
+              title="退出"
+              @click="onLogout"
+              class="p-1 text-notion-steel hover:text-notion-error transition-colors flex-shrink-0"
+            >
+              <LogOut class="w-3.5 h-3.5" />
+            </button>
+          </template>
+        </div>
+      </div>
+
       <!-- Logo -->
       <div class="border-b border-notion-hairline p-4 flex items-center" :class="isCollapsed ? 'justify-center' : 'justify-between'">
         <div v-if="!isCollapsed" class="flex items-center space-x-2">
@@ -69,7 +109,7 @@
       <router-view />
     </main>
 
-    <!-- Mobile bottom tab bar (md-) -->
+    <!-- Mobile bottom tab bar (md-) — 5 tabs (5th is "我") -->
     <nav
       data-bottom-tabs
       class="md:hidden fixed bottom-0 inset-x-0 z-40 flex items-stretch bg-notion-canvas border-t border-notion-hairline pb-[env(safe-area-inset-bottom)]"
@@ -91,16 +131,39 @@
         <component :is="item.icon" class="w-6 h-6" />
         <span>{{ item.label }}</span>
       </router-link>
+      <!-- 5th tab: 我 -->
+      <router-link
+        data-bottom-tab-me
+        to="/me"
+        :aria-current="isActiveRoute('/me') ? 'page' : undefined"
+        :class="[
+          'flex-1 flex flex-col items-center justify-center gap-0.5 py-2 text-[11px] font-medium transition-colors',
+          isActiveRoute('/me')
+            ? 'bg-notion-tint-lavender text-notion-brand-purple-800'
+            : 'text-notion-steel hover:text-notion-ink'
+        ]"
+      >
+        <div v-if="auth.currentUser?.picture_url" class="w-6 h-6 rounded-full overflow-hidden">
+          <img :src="auth.currentUser.picture_url" class="w-full h-full object-cover" alt="me" />
+        </div>
+        <div v-else class="w-6 h-6 rounded-full bg-notion-primary text-notion-on-primary flex items-center justify-center text-[10px] font-semibold">
+          {{ userInitial }}
+        </div>
+        <span>我</span>
+      </router-link>
     </nav>
   </div>
 </template>
 
 <script setup>
-import { ref } from 'vue'
-import { useRoute } from 'vue-router'
-import { Brain, BookOpen, Upload, MessageSquare, Lock, ChevronsLeft, ChevronsRight } from 'lucide-vue-next'
+import { ref, computed } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import { Brain, BookOpen, Upload, MessageSquare, Lock, ChevronsLeft, ChevronsRight, LogOut } from 'lucide-vue-next'
+import { useAuthStore } from '../stores/auth.js'
 
 const route = useRoute()
+const router = useRouter()
+const auth = useAuthStore()
 const isCollapsed = ref(false)
 
 const navItems = [
@@ -111,4 +174,12 @@ const navItems = [
 ]
 
 const isActiveRoute = (path) => route.path.startsWith(path)
+
+const displayName = computed(() => auth.currentUser?.name || auth.currentUser?.email || '')
+const userInitial = computed(() => (displayName.value || '?').charAt(0).toUpperCase())
+
+async function onLogout() {
+  await auth.logout()
+  router.push('/login')
+}
 </script>
