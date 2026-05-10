@@ -2,6 +2,35 @@ name: superpowers-driven
 version: 1
 description: Default OpenSpec workflow - proposal → specs → design → tasks
 artifacts:
+  - id: requirements
+    generates: "../../../docs/superpowers/specs/{{date}}-{{change}}-requirements.md"
+    description: Reviewed requirements doc — output of /opsx:explore
+    template: requirements.md
+    instruction: |
+      Capture WHAT and WHY before any implementation thinking.
+
+      Required frontmatter:
+      - Date (YYYY-MM-DD, the date this file was first written)
+      - Change name (kebab-case, matches openspec change directory name)
+      - Status: DRAFT or REVIEWED
+      - HAS_UI_SURFACE: yes or no
+
+      Required sections (in order):
+      - Goals: what this change achieves
+      - Non-Goals: what is explicitly out of scope
+      - Constraints: hard limits (perf, security, deploy targets, etc.)
+      - Success Criteria: how we know we're done
+      - User Stories: who uses this and how
+      - Open Questions: unresolved decisions
+
+      Reference any relevant SHALL clauses from openspec/specs/<capability>/spec.md.
+
+      Status flow: DRAFT (after first write) → REVIEWED (after brainstorming
+      review pass catches placeholders, contradictions, scope creep, ambiguity).
+      /opsx:propose REJECTS files with Status: DRAFT.
+
+      No implementation details. No code. This is a requirements doc.
+    requires: []
   - id: proposal
     generates: proposal.md
     description: Initial proposal document outlining the change
@@ -39,7 +68,8 @@ artifacts:
 
 
       This is the foundation - specs, design, and tasks all build on this.
-    requires: []
+    requires:
+      - requirements
   - id: specs
     generates: specs/**/*.md
     description: Detailed specifications for the change
