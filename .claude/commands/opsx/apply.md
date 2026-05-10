@@ -34,15 +34,17 @@ For each `## N` task group in `tasks.md`:
 
 For each task, dispatch by prefix:
 
+Convention for the task ordinal `N.X`: `N` is the group number; `X` is the position within the group (1, 2, 3, …). The keyword AFTER `N.X` (RED / GREEN / MOCK / VISUAL DIFF / Run …) decides dispatch — NOT the ordinal letter. The schema's tasks template assigns the last-in-group code-review task position `Z` by convention, but you should match on the "Run superpowers:requesting-code-review" prefix, not on `.Z`.
+
 - **`- [ ] N.X RED — ...`** → write the failing test, run it, confirm the failure mode matches the description (often "function not defined" or "expected X got undefined"). Mark the checkbox.
 
-- **`- [ ] N.Y GREEN — ...`** → write the minimal code to pass. Run the test. Confirm pass. Mark the checkbox.
+- **`- [ ] N.X GREEN — ...`** → write the minimal code to pass. Run the test. Confirm pass. Mark the checkbox.
 
-- **`- [ ] N.Z MOCK — ...`** → open the mock file at the path shown in the task. Note the design tokens and verbatim text strings called out. Mark the checkbox.
+- **`- [ ] N.X MOCK — ...`** → open the mock file at the path shown in the task. Note the design tokens and verbatim text strings called out. Mark the checkbox.
 
-- **`- [ ] N.W VISUAL DIFF — ...`** → bring up the dev stack (`npm run dev:up` or whatever the task says), navigate to the route, eyeball the rendered UI against the mock. Fix any token/color/text drift. Mark the checkbox.
+- **`- [ ] N.X VISUAL DIFF — ...`** → bring up the dev stack (`npm run dev:up` or whatever the task says), navigate to the route, eyeball the rendered UI against the mock. Fix any token/color/text drift. Mark the checkbox.
 
-- **`- [ ] N.Z Run superpowers:requesting-code-review on the diff for group N`** → invoke `superpowers:requesting-code-review` via the **Skill** tool. Pass the group's diff as input. Address CRITICAL/HIGH findings inline before moving on; MEDIUM/LOW go to a follow-up note in the change directory.
+- **`- [ ] N.X Run superpowers:requesting-code-review on the diff for group N — ...`** → invoke `superpowers:requesting-code-review` via the **Skill** tool. Pass the group's diff as input. Address CRITICAL/HIGH findings inline before moving on; MEDIUM/LOW go to a follow-up note in the change directory.
 
 - **Final group's verification task** (`Run superpowers:verification-before-completion`) → invoke `superpowers:verification-before-completion`. Runs pytest / vitest / e2e / `console.log` audit. Fix any failures before marking complete.
 
@@ -58,7 +60,7 @@ openspec status --change <name>
 
 If all tasks are `- [x]`:
 
-> "Apply complete. Suggest: ship + `/opsx:archive <name>`."
+> "Apply complete. Next: ship (e.g. `git push`, plus any project-specific deploy — see CLAUDE.md), then `/opsx:archive <name>`."
 
 If paused (blocker, error, ambiguity, user interrupt):
 

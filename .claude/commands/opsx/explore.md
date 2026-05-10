@@ -85,7 +85,7 @@ If `yes`:
 Selected via awesome-design-md: `<style-id>` (see docs/design/<style-id>.md).
 ```
 
-**Visual mocking** — invoke `superpowers:brainstorming`'s Visual Companion. The companion renders mocks in the browser; iterate with the user until the layouts and tokens are nailed down. Save the final HTML to:
+**Visual mocking** — re-invoke `superpowers:brainstorming` (or continue the existing brainstorming session from Phase 3) and explicitly request its Visual Companion mode (the brainstorming skill includes an offer-and-consent step for Visual Companion — accept it; subsequent visual questions are answered in the browser). The companion renders mocks in the browser; iterate with the user until the layouts and tokens are nailed down. Save the final HTML to:
 
 ```
 docs/superpowers/specs/mocks/<date>-<topic>-mocks.html

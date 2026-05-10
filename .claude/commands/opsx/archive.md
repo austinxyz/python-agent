@@ -1,13 +1,13 @@
 ---
 name: "OPSX: Archive"
-description: Archive a completed change + 4 cleanup steps the bare CLI doesn't do
+description: Archive a completed change + post-archive checklist (Purpose, README, pitfalls, project README, dev log, commit)
 category: Workflow
 tags: [workflow, archive, experimental]
 ---
 
-Run `openspec archive` and then perform the 4 cleanup steps that close the loop on capability docs and pitfall sinking.
+Run `openspec archive` and then perform the post-archive cleanup that closes the loop on capability docs and pitfall sinking. Four numbered cleanup steps + dev log check + final commit.
 
-**Input**: Optionally specify a change name. If omitted, infer or prompt.
+**Input**: Optionally specify a change name. If omitted, infer from conversation context. If ambiguous, run `openspec list --json` and use **AskUserQuestion** to let the user select.
 
 ---
 
@@ -31,11 +31,22 @@ If sync chosen, invoke `openspec-sync-specs` via the Skill tool.
 
 ### 2. Run the archive
 
+**Before archiving, capture the commit range for this change** so later cleanup steps (3 and 5) can refer back to it after the change directory moves:
+
+```bash
+# Note the first commit that touched this change directory:
+git log --diff-filter=A --format="%H" -- openspec/changes/<name>/.openspec.yaml | tail -1
+# Note HEAD (latest commit on the change):
+git rev-parse HEAD
+```
+
+Save both SHAs in your working memory as `<change-base-sha>..<change-head-sha>`.
+
 ```bash
 openspec archive <name>
 ```
 
-Expected: change directory moves to `openspec/changes/archive/<date>-<name>/`. Capability specs at `openspec/specs/<capability>/spec.md` are created (if new) or updated (if delta).
+Expected: change directory moves to `openspec/changes/archive/<date>-<name>/`. Capability specs at `openspec/specs/<capability>/spec.md` are created (if new) or updated (if delta). The proposal / specs / design / tasks files now live at `openspec/changes/archive/<date>-<name>/` (referred to as `<archived-dir>` below).
 
 ### 3. Cleanup step 1 — fill capability spec `## Purpose`
 
@@ -46,8 +57,8 @@ grep -l 'TBD - created by archiving' openspec/specs/*/spec.md
 ```
 
 For each match, write a 1-3 sentence Purpose derived from:
-- The change's `proposal.md` Why section
-- The requirements doc's Goals section
+- The change's `<archived-dir>/proposal.md` Why section
+- The requirements doc at `docs/superpowers/specs/<date>-<name>-requirements.md` Goals section
 
 Replace the placeholder. Commit when all are filled.
 
@@ -68,7 +79,7 @@ If the format differs, follow the existing pattern in this specific README — d
 
 ### 5. Cleanup step 3 — update `CLAUDE.md` pitfalls
 
-Read the change's `docs/log/<date>.md` entry (if it exists) and the change diff. If any non-obvious gotcha emerged (timing-sensitive bootstrap, env-var ordering, schema migration foot-gun, file-handling edge case), append a 2-3 line entry to the relevant section of `CLAUDE.md`'s Pitfalls.
+Read the dev log entry at `docs/log/<date>.md` (if it exists) and the change diff via `git log --oneline <change-base-sha>..<change-head-sha>` plus `git diff <change-base-sha>..<change-head-sha>` (using the SHAs captured in step 2). If any non-obvious gotcha emerged (timing-sensitive bootstrap, env-var ordering, schema migration foot-gun, file-handling edge case), append a 2-3 line entry to the relevant section of `CLAUDE.md`'s Pitfalls.
 
 If no new pitfall surfaced, skip this step. Don't fabricate pitfalls.
 
@@ -85,11 +96,9 @@ Examples:
 - `auth-rate-limiting` → NO (internal hardening, no UX change) → skip
 - `multi-user-auth-admin-ui` → YES (new admin UI) → update README
 
-### 7. Cleanup step 5 — dev log check
+### 7. Dev log check
 
-```bash
-ls docs/log/<today>.md 2>/dev/null
-```
+Check whether `docs/log/YYYY-MM-DD.md` for today's date exists (use the Glob tool or, in bash: `ls docs/log/$(date +%Y-%m-%d).md 2>/dev/null`; in PowerShell: `Get-ChildItem docs/log/$((Get-Date).ToString('yyyy-MM-dd')).md`).
 
 If missing, prompt:
 

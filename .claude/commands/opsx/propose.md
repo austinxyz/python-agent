@@ -80,9 +80,13 @@ Every artifact should be `done`. If any are not, troubleshoot the specific artif
 ### 6. Commit and handoff
 
 ```bash
-git add openspec/changes/<topic>/ docs/superpowers/specs/mocks/*-<topic>-mocks.html
+git add openspec/changes/<topic>/
+# Only if HAS_UI_SURFACE: yes AND the mocks file hasn't already been committed in /opsx:explore Phase 5:
+git add docs/superpowers/specs/mocks/*-<topic>-mocks.html
 git commit -m "docs: propose <topic> change"
 ```
+
+Verify with `git status` before committing — the second `git add` is conditional. For backend-only changes (`HAS_UI_SURFACE: no`), the mocks file may already be the stub from `/opsx:propose` Step 3 (mocks artifact generation) or absent entirely; check before staging.
 
 Output:
 
