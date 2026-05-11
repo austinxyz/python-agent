@@ -317,118 +317,58 @@ OpenSpec 版本：1.2.0
 
 ## 跨项目复用
 
-新项目跑 `openspec init` **不会**自动用到 `superpowers-driven` —— schema 是 project-level 的，仅在 `python-agent` repo 内可见。
+`superpowers-driven` schema 和 `/opsx:*` commands 通过 [opsx-superpowers](https://github.com/austinxyz/opsx-superpowers) ECC plugin 分发。
 
-### Schema 解析顺序
-
-```
-项目级 openspec/schemas/              （仅当前 repo）
-   ↓ 找不到
-用户级 ~/.local/share/openspec/schemas/   （Linux/Mac）
-       %APPDATA%\openspec\schemas\        （Windows）
-   ↓ 找不到
-内置  <npm-global>/@fission-ai/openspec/schemas/  （spec-driven 在这儿）
-```
-
-我们的 fork 在第一层。
-
-### 三个方案（按工程量从低到高）
-
-#### 方案 A：手动拷（最简单）
-
-新项目跑：
+### 安装
 
 ```bash
+# 1. 安装 plugin
+claude --plugin-url https://github.com/austinxyz/opsx-superpowers
+
+# 2. 把 schema promote 到 user-level（装完和每次升级后都要跑）
+opsx-install
+
+# 验证
+openspec schemas   # 应该列出 superpowers-driven（Source: user）
+```
+
+### 新项目初始化
+
+```bash
+cd my-project
 openspec init
-cp -r ~/projects/python-agent/openspec/schemas/superpowers-driven openspec/schemas/
-# 改 openspec/config.yaml 把 schema: spec-driven 改成 schema: superpowers-driven
+# 从 plugin 复制初始配置（路径在 claude --plugin-dir opsx-superpowers 下）
+cp <plugin-cache-dir>/config-template.yaml openspec/config.yaml
+# 编辑 openspec/config.yaml：填 project 节和 context
 ```
 
-也要拷 slash commands（用户级或项目级）：
-
-```bash
-mkdir -p .claude/commands/opsx
-cp ~/projects/python-agent/.claude/commands/opsx/*.md .claude/commands/opsx/
-```
-
-#### 方案 B：promote 到用户级（一次性投入）
-
-```bash
-# Windows
-mkdir -p "$env:APPDATA\openspec\schemas"
-cp -r openspec/schemas/superpowers-driven "$env:APPDATA\openspec\schemas\"
-
-# Linux/Mac
-mkdir -p ~/.local/share/openspec/schemas
-cp -r openspec/schemas/superpowers-driven ~/.local/share/openspec/schemas/
-```
-
-验证：
-
-```bash
-openspec schemas    # 应该列出 superpowers-driven
-openspec schema which superpowers-driven   # 应该报 Source: user
-```
-
-slash commands 同理 promote 到 `~/.claude/commands/opsx/`（Claude Code 用户级 commands）。
-
-之后任何新项目 `openspec init` 后只要改一行 `config.yaml`：
+最小 `openspec/config.yaml`：
 
 ```yaml
 schema: superpowers-driven
+
+project:
+  dev_stack_command: "your-dev-stack-command"
+  test_commands:
+    - "your-test-command"
+  design_system: "notion"
+
+context: |
+  # 你的项目描述
 ```
 
-就能用。
+然后开始第一个 change：
 
-**副作用：** python-agent 自己也 fall back 到用户级。建议 promote 后**删掉 python-agent 项目级那份**避免两份不同步。
+```
+/opsx:explore my-first-feature
+```
 
-#### 方案 C：bootstrap 脚本
-
-`~/bin/opsx-init <new-project-dir>`：
+### 升级
 
 ```bash
-#!/usr/bin/env bash
-set -e
-cd "$1"
-
-openspec init
-sed -i 's/schema: spec-driven/schema: superpowers-driven/' openspec/config.yaml
-
-mkdir -p .claude/commands/opsx
-cp ~/projects/python-agent/.claude/commands/opsx/*.md .claude/commands/opsx/
-
-mkdir -p docs
-cp ~/projects/python-agent/docs/openspec-workflow.md docs/
-
-echo "✓ OpenSpec + Superpowers workflow ready in $1"
+claude --plugin-url https://github.com/austinxyz/opsx-superpowers
+opsx-install   # 每次升级后重新 promote schema
 ```
-
-跑 `opsx-init ~/projects/new-thing`，全套就位。
-
-### 注意：不是 100% 通用
-
-我们的 `superpowers-driven` 里有些 **python-agent 项目特有**的东西：
-
-| 不通用的 | 在哪儿 |
-|---|---|
-| `npm run dev:up` 起 dev stack | `.claude/commands/opsx/apply.md`、`templates/tasks.md` |
-| Notion 设计系统 + `bg-notion-*` token 名 | `templates/tasks.md`、`explore.md` Phase 4 |
-| `cd backend && pytest` / `cd frontend && npm test` | `templates/tasks.md` 的 verification 命令 |
-| Qdrant `user_id` filter 守门 | `templates/tasks.md` |
-
-**重构建议（先别现在做）：**
-
-跑过两个新项目暴露痛点之后，把项目特化的内容从 schema 抽出来回 `config.yaml`（config 本来就是项目级）。schema 模板变通用，rules 变项目化。
-
-### 推荐路径
-
-| 阶段 | 做什么 |
-|---|---|
-| 现在（只有 python-agent 1 个项目） | 不用动，schema 留在项目级 |
-| 起第 2 个项目时 | **方案 A**（手动拷），看用得顺不顺 |
-| 起第 3 个项目前 | **方案 B + C**（promote + bootstrap script），同时 refactor 抽出项目特化的东西到 config.yaml |
-
-一次性总是猜不准 —— 跑过两个项目再回头抽，省一次重写。
 
 ---
 
