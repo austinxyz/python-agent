@@ -3,6 +3,10 @@
 > 这是面向**使用者**的指南（你或未来给项目做改动的人）。
 > 想看为什么这么设计、架构怎么拆，去 [docs/superpowers/specs/2026-05-10-openspec-superpowers-workflow-design.md](superpowers/specs/2026-05-10-openspec-superpowers-workflow-design.md)。
 
+![OpenSpec + Superpowers Workflow 全景图](openspec+superpowers.png)
+
+*4 个 phase 各自的 Purpose / Key Activities / Outputs / Gate / AI Tools & Skills / Source of Truth。下面的 TL;DR 给纯文本快速浏览版；详细每个 phase 再往后翻。*
+
 ---
 
 ## TL;DR
