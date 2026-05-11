@@ -68,7 +68,7 @@ rules:
   proposal:
     - "Always include an `## Out of Scope` section (note: requirements.md uses `## Non-Goals` instead; proposal.md uses `## Out of Scope`)."
     - "Capabilities section MUST list which existing capability is modified. Look in openspec/specs/ first; do not invent capability names."
-    - "If the change has visual/UX surface, mention that brainstorming has already produced design mockups under docs/superpowers/specs/2026-05-05-knowledge-agent-design.md."
+    - "If the change has visual/UX surface, reference this change's mocks file at docs/superpowers/specs/mocks/<date>-<topic>-mocks.html (produced in /opsx:explore Phase 4). docs/superpowers/specs/2026-05-05-knowledge-agent-design.md covers the original project-wide architecture; do NOT cite it as if it were the mocks for the current change."
 
   design:
     - "Decisions section MUST cover alternatives considered, not just the choice made."

@@ -131,6 +131,10 @@ In UGOS file manager, edit `/volume1/docker/python-agent/docker-compose.yml` —
 
 ## Known Pitfalls (past mistakes)
 
+### OpenSpec Workflow
+
+- **`openspec status` shows `requirements` and `mocks` as `ready` (not `done`) even when the files exist.** OpenSpec 1.2.0 does not substitute `{{date}}` / `{{change}}` placeholders in schema `generates:` paths, so the CLI can't locate the actual files. The `superpowers-driven` slash commands (`/opsx:explore`, `/opsx:propose`) substitute and write files at the resolved paths themselves. Do not interpret `ready` as "missing" — verify with `ls docs/superpowers/specs/*-<topic>-{requirements.md,mocks.html}`. See `docs/superpowers/specs/2026-05-10-openspec-superpowers-workflow.md` for the full workflow doc.
+
 ### Windows Environment
 
 - **Bash tool cannot use Windows paths**: `cd C:\Users\...` fails in the Bash tool (Git Bash strips backslashes). For any shell operation involving Windows paths, use the **PowerShell tool**.

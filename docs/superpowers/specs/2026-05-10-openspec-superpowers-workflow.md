@@ -81,7 +81,12 @@ Plus dev log check (`docs/log/<today>.md`) and a single cleanup commit.
 | Phase orchestration (Status: gate, Visual Companion, archive cleanup) | Slash commands | Actions, not artifacts |
 | Skill invocation timing (when to call TDD / review / verification) | `.claude/commands/opsx/apply.md` | Execution-time decisions |
 
+## Known limitations
+
+- **`openspec status` shows `requirements` and `mocks` as `ready` even when the files exist.** OpenSpec 1.2.0 does not substitute `{{date}}` / `{{change}}` template variables in `generates:` paths, so it can't locate the files to confirm they exist. The slash commands (`/opsx:explore` and `/opsx:propose`) perform the substitution and write the files at the resolved paths. This is expected — do not interpret `ready` as "missing"; verify by `ls docs/superpowers/specs/*-<topic>-requirements.md` instead.
+
 ## Migration history
 
 - 2026-05-10: schema forked from `spec-driven`; `requirements` + `mocks` artifacts added; rules migrated from `openspec/config.yaml` to schema instructions; 4 slash commands rewritten. First validation target: `nas-https` (next change to use this workflow).
 - In-flight `multi-user-auth-admin-ui` (created on `spec-driven`) keeps that schema until archived. Per-change schema is locked at change-creation time.
+- In-flight `chat-file-pinning` was created before this schema was finalized; its `requirements` and `mocks` artifacts will permanently show `status: ready` (known limitation above). When you eventually `/opsx:archive` it, the pre-flight guard will warn about incomplete artifacts — confirm to proceed, and consider whether to retrofit its `tasks.md` with the workflow's RED/GREEN + review-checkpoint structure before `/opsx:apply`.
