@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>nas-https mocks</title>
+  <!-- HAS_UI_SURFACE: yes -->
+  <!--
+    Design system: Notion (docs/design/notion.md). Reuses existing tokens
+    from multi-user-auth-core's views — no new tokens introduced.
+
+    Single page: /admin/cert. Admin-only (member is redirected to /chat
+    by the existing router guard, same mechanism as the future /admin/users).
+  -->
+  <style>
+    :root {
+      /* Notion design tokens — mirrors docs/design/notion.md */
+      --notion-canvas: #ffffff;
+      --notion-surface-soft: #fafaf9;
+      --notion-hairline: #e5e3df;
+      --notion-hairline-soft: #efedea;
+      --notion-ink: #191918;
+      --notion-charcoal: #2f2f2c;
+      --notion-slate: #5a5852;
+      --notion-steel: #777570;
+      --notion-stone: #989590;
+      --notion-brand-navy: #0a1530;
+      --notion-on-dark: #fafaf9;
+      --notion-tint-mint: #d9f3e1;
+      --notion-brand-green: #1aae39;
+      --notion-tint-yellow: #fef7d6;
+      --notion-warning: #dd5b00;
+      --notion-tint-rose: #fde0ec;
+      --notion-error: #e03131;
+      --notion-tint-lavender: #e6e0f5;
+      --notion-brand-purple-800: #391c57;
+    }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; margin: 0; padding: 24px; background: var(--notion-surface-soft); color: var(--notion-ink); }
+    section { margin-bottom: 48px; max-width: 900px; }
+    h1 { margin: 0 0 8px 0; font-size: 18px; font-weight: 600; color: var(--notion-ink); }
+    h2 { margin: 0 0 8px 0; font-size: 15px; font-weight: 600; color: var(--notion-ink); }
+    p.lede { margin: 0 0 24px 0; color: var(--notion-steel); font-size: 13px; }
+
+    /* Page card */
+    .page-wrap { display: flex; gap: 24px; }
+    .card {
+      background: var(--notion-canvas);
+      border: 1px solid var(--notion-hairline);
+      border-radius: 10px;
+      padding: 20px 24px;
+      max-width: 560px;
+    }
+    .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+    .card-title { font-size: 15px; font-weight: 600; color: var(--notion-ink); }
+    .status-pill {
+      font-size: 11px; padding: 3px 10px; border-radius: 999px;
+      font-weight: 500;
+    }
+    .status-online { background: var(--notion-tint-mint); color: var(--notion-brand-green); }
+    .status-warning { background: var(--notion-tint-yellow); color: var(--notion-warning); }
+    .status-error { background: var(--notion-tint-rose); color: var(--notion-error); }
+
+    /* Field rows */
+    .row {
+      display: flex; justify-content: space-between; align-items: baseline;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--notion-hairline-soft);
+      font-size: 13px;
+    }
+    .row:last-child { border-bottom: none; }
+    .row-label { color: var(--notion-steel); }
+    .row-value { color: var(--notion-charcoal); font-family: 'SF Mono', Monaco, Consolas, monospace; font-size: 12px; }
+    .row-value strong { font-weight: 600; color: var(--notion-ink); }
+
+    /* Days-remaining badge inside value */
+    .days-badge {
+      font-size: 11px; padding: 2px 8px; border-radius: 6px;
+      margin-left: 8px;
+    }
+    .days-ok { background: var(--notion-tint-mint); color: var(--notion-brand-green); }
+    .days-warning { background: var(--notion-tint-yellow); color: var(--notion-warning); }
+    .days-error { background: var(--notion-tint-rose); color: var(--notion-error); }
+
+    /* Mobile equivalent */
+    .mobile { max-width: 393px; border: 1px solid var(--notion-hairline); border-radius: 12px; overflow: hidden; }
+
+    /* AppLayout container hint */
+    .app-shell-hint { font-size: 11px; color: var(--notion-stone); margin: 4px 0 12px 0; font-style: italic; }
+
+    .legend { margin-top: 16px; font-size: 11px; color: var(--notion-steel); }
+    .legend code { background: var(--notion-tint-lavender); color: var(--notion-brand-purple-800); padding: 1px 5px; border-radius: 4px; }
+  </style>
+</head>
+<body>
+
+<section id="admin-cert-desktop">
+  <h1>/admin/cert — desktop</h1>
+  <p class="lede">Read-only page. Admin-only (member → redirect to /chat). One card, four rows, three status pills. Renders inside the existing AppLayout (sidebar visible).</p>
+  <div class="app-shell-hint">— rendered inside AppLayout main pane (sidebar at left in real app) —</div>
+
+  <div class="page-wrap">
+    <div class="card" data-mock="admin-cert-healthy">
+      <div class="card-header">
+        <div class="card-title">证书与 Tailscale 状态</div>
+        <span class="status-pill status-online" data-mock="overall-pill-healthy">健康</span>
+      </div>
+      <div class="row">
+        <span class="row-label">Tailnet 主机名</span>
+        <span class="row-value"><strong>python-agent.tail-abc123.ts.net</strong></span>
+      </div>
+      <div class="row">
+        <span class="row-label">证书到期</span>
+        <span class="row-value">
+          2026-08-08T00:00:00Z
+          <span class="days-badge days-ok" data-mock="days-badge">还剩 90 天</span>
+        </span>
+      </div>
+      <div class="row">
+        <span class="row-label">Tailscale 连接</span>
+        <span class="row-value">
+          <span class="status-pill status-online" style="font-size:11px;padding:2px 8px;">online</span>
+        </span>
+      </div>
+      <div class="row">
+        <span class="row-label">上次 renew</span>
+        <span class="row-value">2026-05-10T03:14:00Z（11 天前）</span>
+      </div>
+      <div class="legend">
+        数据源：后端 <code>GET /api/admin/cert-status</code>。页面每 60 秒自动刷新一次。
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="admin-cert-warning">
+  <h2>同一页面 — 证书 7-30 天到期（warning）</h2>
+  <p class="lede">days-remaining 在 7-30 区间 → 黄色 badge + 顶部 pill 切到「即将到期」。</p>
+  <div class="card" data-mock="admin-cert-warning">
+    <div class="card-header">
+      <div class="card-title">证书与 Tailscale 状态</div>
+      <span class="status-pill status-warning">即将到期</span>
+    </div>
+    <div class="row">
+      <span class="row-label">Tailnet 主机名</span>
+      <span class="row-value"><strong>python-agent.tail-abc123.ts.net</strong></span>
+    </div>
+    <div class="row">
+      <span class="row-label">证书到期</span>
+      <span class="row-value">
+        2026-05-31T00:00:00Z
+        <span class="days-badge days-warning">还剩 21 天</span>
+      </span>
+    </div>
+    <div class="row">
+      <span class="row-label">Tailscale 连接</span>
+      <span class="row-value">
+        <span class="status-pill status-online" style="font-size:11px;padding:2px 8px;">online</span>
+      </span>
+    </div>
+    <div class="row">
+      <span class="row-label">上次 renew</span>
+      <span class="row-value">2026-02-29T03:14:00Z（71 天前）</span>
+    </div>
+  </div>
+  <p class="legend" style="margin-top: 12px;">如果到期 &lt; 7 天 → red 状态 pill「紧急」 + red badge。如果已过期 → 状态 pill「已过期」 + Tailscale 应该已自动 renew，没 renew 说明 Tailscale daemon 卡住，需要去 NAS 上敲命令排查。</p>
+</section>
+
+<section id="admin-cert-tailscale-down">
+  <h2>同一页面 — Tailscale daemon 离线（error）</h2>
+  <p class="lede">Tailscale 在 NAS 上的 daemon 挂了或没启动 → 整个状态变红，提醒去 UGOS / NAS 上排查。</p>
+  <div class="card" data-mock="admin-cert-tailscale-down">
+    <div class="card-header">
+      <div class="card-title">证书与 Tailscale 状态</div>
+      <span class="status-pill status-error">异常</span>
+    </div>
+    <div class="row">
+      <span class="row-label">Tailnet 主机名</span>
+      <span class="row-value">—</span>
+    </div>
+    <div class="row">
+      <span class="row-label">证书到期</span>
+      <span class="row-value">无法读取</span>
+    </div>
+    <div class="row">
+      <span class="row-label">Tailscale 连接</span>
+      <span class="row-value">
+        <span class="status-pill status-error" style="font-size:11px;padding:2px 8px;">offline / 命令失败</span>
+      </span>
+    </div>
+    <div class="row">
+      <span class="row-label">建议</span>
+      <span class="row-value">SSH 进 NAS，跑 <code>tailscale status</code> 排查。若 daemon 没启，UGOS 应用中心 → Tailscale → 启动。</span>
+    </div>
+  </div>
+</section>
+
+<section id="admin-cert-mobile">
+  <h2>/admin/cert — 移动端</h2>
+  <p class="lede">同一页面在 iPhone 14 (393×852) 窄屏下的样子。卡片自适应 100% 宽，行布局不变。底部 tab 栏的「我」按钮可以通过 /me → 跳到 /admin/cert（仅 admin 用户的 /me 页面会有「证书与 Tailscale 状态」入口）。</p>
+  <div class="mobile">
+    <div class="card" style="border: none; max-width: none; border-radius: 0;">
+      <div class="card-header">
+        <div class="card-title">证书与 Tailscale 状态</div>
+        <span class="status-pill status-online">健康</span>
+      </div>
+      <div class="row">
+        <span class="row-label">主机名</span>
+        <span class="row-value" style="font-size: 11px;"><strong>python-agent.tail-abc123.ts.net</strong></span>
+      </div>
+      <div class="row">
+        <span class="row-label">到期</span>
+        <span class="row-value">
+          2026-08-08
+          <span class="days-badge days-ok">90 天</span>
+        </span>
+      </div>
+      <div class="row">
+        <span class="row-label">Tailscale</span>
+        <span class="row-value">
+          <span class="status-pill status-online" style="font-size:10px;padding:2px 7px;">online</span>
+        </span>
+      </div>
+      <div class="row">
+        <span class="row-label">上次 renew</span>
+        <span class="row-value" style="font-size: 11px;">11 天前</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <h2>Locked design tokens（前端测试 wrapper.classes() 断言）</h2>
+  <ul style="font-size: 13px; line-height: 1.8; color: var(--notion-charcoal);">
+    <li>卡片容器：<code>bg-notion-canvas border-notion-hairline rounded-lg</code></li>
+    <li>状态 pill「健康」：<code>bg-notion-tint-mint text-notion-brand-green</code></li>
+    <li>状态 pill「即将到期」：<code>bg-notion-tint-yellow text-notion-warning</code></li>
+    <li>状态 pill「异常 / 紧急」：<code>bg-notion-tint-rose text-notion-error</code></li>
+    <li>行 label：<code>text-notion-steel text-[13px]</code></li>
+    <li>行 value：<code>text-notion-charcoal font-mono text-[12px]</code></li>
+    <li>Days badge 30+：<code>bg-notion-tint-mint text-notion-brand-green</code></li>
+    <li>Days badge 7-30：<code>bg-notion-tint-yellow text-notion-warning</code></li>
+    <li>Days badge &lt;7：<code>bg-notion-tint-rose text-notion-error</code></li>
+  </ul>
+</section>
+
+<section>
+  <h2>Locked verbatim text strings（前端测试 wrapper.text() 断言）</h2>
+  <ul style="font-size: 13px; line-height: 1.8; color: var(--notion-charcoal);">
+    <li>页面标题：<code>证书与 Tailscale 状态</code></li>
+    <li>行 label：<code>Tailnet 主机名</code> / <code>证书到期</code> / <code>Tailscale 连接</code> / <code>上次 renew</code></li>
+    <li>健康状态 pill：<code>健康</code></li>
+    <li>即将到期 pill：<code>即将到期</code></li>
+    <li>异常 pill：<code>异常</code></li>
+    <li>剩余天数 badge：<code>还剩 N 天</code></li>
+    <li>异常态建议文案：<code>SSH 进 NAS，跑 tailscale status 排查。</code></li>
+  </ul>
+</section>
+
+</body>
+</html>
