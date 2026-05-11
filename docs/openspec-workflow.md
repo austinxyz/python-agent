@@ -5,6 +5,8 @@
 >
 > 这个文件只记录 **本项目专属** 的内容。
 
+![OpenSpec + Superpowers Workflow 全景图](openspec+superpowers.png)
+
 ---
 
 ## 安装 / 升级 plugin
