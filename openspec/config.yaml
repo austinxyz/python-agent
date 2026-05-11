@@ -1,5 +1,15 @@
 schema: superpowers-driven
 
+project:
+  dev_stack_command: "npm run dev:up"
+  test_commands:
+    - "cd backend && pytest"
+    - "cd frontend && npm test"
+  e2e_command: "cd frontend && npm run e2e"
+  design_system: "notion"
+  custom_verification_checks:
+    - 'grep -rn "search_private\|qdrant.*private" backend/app --include="*.py" | grep -v "user_id"'
+
 # Project context — injected into every artifact's instruction prompt.
 context: |
   Tech stack: Python 3.11+ + Flask 3.x backend, LangGraph 0.2+ for agent
@@ -65,6 +75,8 @@ context: |
 # Per-artifact rules — appended to artifact-specific instructions.
 # Each rule must be a quoted scalar to avoid YAML multi-line ambiguity.
 rules:
+  tasks:
+    - "LangGraph rule: graph tasks MUST test nodes independently (unit) before testing the full graph flow (integration)."
   proposal:
     - "Always include an `## Out of Scope` section (note: requirements.md uses `## Non-Goals` instead; proposal.md uses `## Out of Scope`)."
     - "Capabilities section MUST list which existing capability is modified. Look in openspec/specs/ first; do not invent capability names."
