@@ -129,6 +129,26 @@
 
 ---
 
+### `multi-user-auth` ✅ 已实现
+**用户故事**：多个用户可以用邮件+密码（或 Google 登录）访问同一实例，每人的私有数据完全隔离；知识库共享；管理员通过 CLI 邀请新用户（Admin UI 在后续 change 中交付）。
+**覆盖需求**：AUTH-01 ~ AUTH-11（`docs/superpowers/specs/2026-05-09-multi-user-auth-requirements.md`）
+**后台**：
+- `users` + `invite_tokens` 表；argon2id 密码哈希；email 规范化（strip + lower）
+- `auth_service`（哈希/验证/Google token 校验）+ `user_service`（CRUD + bootstrap 迁移）
+- `@require_auth` 中间件：加载 `session['user_id']`，断言 `status='active'`，注入 `g.user`；应用于所有 `/api/*` 路由（auth 端点本身除外）
+- 8 个 `/api/auth/` 路由：login · login/google · logout · me · config · invite/<token> · accept-invite · change-password
+- Bootstrap：首次启动迁移 `user_id="default"` 行至 admin UUID；若 `INITIAL_ADMIN_EMAIL` 未设置则静默跳过（避免 Docker 重启循环）
+- CLI 邀请工具：`python -m app.cli.invite_user <email> [role]`（admin UI 上线前的临时方案）
+**前台**：
+- `useAuthStore` Pinia store（fetchMe / login / loginWithGoogle / acceptInvite / changePassword / logout）
+- Axios 401 拦截器：非 auth 端点的 401 → 清 `currentUser` + 跳 `/login?redirect=<path>`
+- 路由守卫：未登录重定向 `/login`；已登录跳过 `/login`
+- `LoginView`（email+password + 可选 Google GSI 按钮）· `AcceptInviteView`（设密码激活邀请）· `ChangePasswordView`
+- AppLayout 右上角用户 pill（名字 + 头像）+ 登出按钮
+**验收标准**：全新 DB 启动 → `docker logs` 找到 Bootstrap 邀请 URL → 浏览器打开 → 设密码 → 落 `/chat`；邀请第二个用户 → 该用户私有数据与 admin 完全隔离。
+
+---
+
 ### `chat-qa`
 **用户故事**：用户可以基于知识库和私有数据进行多轮对话，AI 回答实时流式输出并显示来源引用；用户可以把好的回答保存为私有笔记（自定义名称 + 目录）；历史会话可以继续。
 
@@ -165,6 +185,7 @@
 | 归档名 | 影响 Capability | 时间 |
 |--------|----------------|------|
 | `2026-05-06-ingest-redesign` | `ingest` | 2026-05-06 |
+| `2026-05-10-multi-user-auth-core` | `multi-user-auth` · `frontend-scaffold` | 2026-05-10 |
 
 ---
 

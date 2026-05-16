@@ -6,8 +6,9 @@ A personal knowledge base powered by RAG. Ingest documents, web pages, and text 
 
 - **Ingest** — upload files (PDF, MD, TXT), paste URLs, or enter text directly; content is chunked, embedded, and stored in Qdrant
 - **Browse** — left-right knowledge browser: domain tree on the left, content viewer on the right
-- **Search & Q&A** — ReAct agent retrieves relevant chunks and answers questions with source attribution (coming soon)
-- **Private data** — per-user private collection alongside the shared knowledge base (coming soon)
+- **Search & Q&A** — ReAct agent retrieves relevant chunks and answers questions with source attribution
+- **Private data** — per-user private entries and notes alongside the shared knowledge base
+- **Multi-user auth** — email+password login; Google SSI on HTTPS; per-user data isolation; admin invites via CLI (web UI coming soon)
 
 ## Tech Stack
 
@@ -105,6 +106,29 @@ docker compose up --build
 open http://localhost:3000
 ```
 
+### First Login (Bootstrap)
+
+The first user is created automatically on startup:
+
+```bash
+# 1. Set INITIAL_ADMIN_EMAIL in .env, then start:
+docker compose up --build
+
+# 2. Find the bootstrap invite URL in the api logs:
+docker logs python-agent-api-1 | grep BOOTSTRAP
+# → [BOOTSTRAP] Admin invite URL: http://localhost:3000/accept-invite?token=...
+
+# 3. Open the URL in a browser, set your password, and you're in.
+```
+
+### Inviting Additional Users
+
+```bash
+docker exec python-agent-api-1 python -m app.cli.invite_user user@example.com member
+# → Invite URL: http://localhost:3000/accept-invite?token=...
+# Send the URL to the user via any channel.
+```
+
 ### Environment Variables
 
 ```env
@@ -123,6 +147,11 @@ SQLITE_PATH=/app/data/knowledge_agent.db
 UPLOADS_PATH=/app/uploads
 
 FLASK_SECRET_KEY=change-me
+
+# Multi-user auth (required)
+INITIAL_ADMIN_EMAIL=you@example.com   # creates admin on first startup
+APP_BASE_URL=http://localhost:3000    # used in invite URLs
+SESSION_COOKIE_SECURE=false           # set true once HTTPS is configured
 ```
 
 ## Development

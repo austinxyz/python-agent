@@ -1,7 +1,7 @@
 # multi-user-auth Specification
 
 ## Purpose
-TBD - created by archiving change multi-user-auth-core. Update Purpose after archive.
+Replaces the hardcoded `user_id="default"` with real multi-user authentication. Multiple users log in via email+password (or Google SSI on HTTPS), with each user's private data, notes, and chat sessions fully isolated. The knowledge base remains shared. A one-time bootstrap migration rewrites all existing `user_id="default"` rows to the designated admin's UUID on first multi-user-aware startup.
 ## Requirements
 ### Requirement: Email canonicalization invariant
 The system SHALL `.strip().lower()` every email at every read AND every write boundary: bootstrap insert, CLI invite, accept-invite, password login lookup, Google JWT email-claim lookup. The DB stores only canonicalized values. A user typing `Austin@Gmail.com` resolves to the same row as `austin@gmail.com`.
