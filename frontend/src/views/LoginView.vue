@@ -121,6 +121,7 @@ function loadGsi(clientId) {
   if (typeof window === 'undefined') return
   if (document.getElementById('gsi-script')) {
     initGsi(clientId)
+    gsiReady.value = true
     return
   }
   const script = document.createElement('script')
@@ -128,18 +129,25 @@ function loadGsi(clientId) {
   script.src = 'https://accounts.google.com/gsi/client'
   script.async = true
   script.defer = true
-  script.onload = () => initGsi(clientId)
+  script.onload = () => {
+    initGsi(clientId)
+    gsiReady.value = true
+  }
+  script.onerror = () => { gsiReady.value = true }  // unblock button even on load failure
   document.head.appendChild(script)
 }
 
 function initGsi(clientId) {
-  window.google?.accounts?.id?.initialize({
-    client_id: clientId,
-    callback: handleGoogleCredential,
-    auto_select: false,
-    cancel_on_tap_outside: true,
-  })
-  gsiReady.value = true
+  try {
+    window.google?.accounts?.id?.initialize({
+      client_id: clientId,
+      callback: handleGoogleCredential,
+      auto_select: false,
+      cancel_on_tap_outside: true,
+    })
+  } catch (e) {
+    // initialize() may throw for unauthorized origins; prompt() will surface the error
+  }
 }
 
 async function handleGoogleCredential(response) {
