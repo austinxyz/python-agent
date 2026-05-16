@@ -48,6 +48,25 @@ def _validate_session() -> SimpleNamespace | None:
     return SimpleNamespace(**user)
 
 
+def require_admin(view_func):
+    """Decorator: require an authenticated session with role='admin'.
+
+    Unauthenticated → 401. Authenticated non-admin → 403.
+    """
+
+    @wraps(view_func)
+    def wrapper(*args, **kwargs):
+        user = _validate_session()
+        if user is None:
+            return _clear_session_and_401()
+        if user.role != "admin":
+            return jsonify({"error": "admin required"}), 403
+        g.user = user
+        return view_func(*args, **kwargs)
+
+    return wrapper
+
+
 def require_auth(view_func):
     """Decorator: require an authenticated session whose user is currently
     `status='active'`. Sets `g.user` (SimpleNamespace) on success.

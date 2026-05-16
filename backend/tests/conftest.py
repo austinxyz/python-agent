@@ -29,6 +29,7 @@ _AUTH_TEST_FILES = (
     "test_users_schema.py",
     "test_email_canonicalization.py",
     "test_bootstrap_migration.py",
+    "test_admin_routes.py",
 )
 
 

@@ -69,6 +69,8 @@ INITIAL_ADMIN_EMAIL=austin.xyz@gmail.com   # bootstrap creates this admin on fir
 APP_BASE_URL=http://localhost:3000          # dev. NAS: http://10.0.0.20:8910
 SESSION_COOKIE_SECURE=false                  # set true once HTTPS lands
 # GOOGLE_CLIENT_ID=                          # optional; if unset GSI button hidden
+# TAILSCALE_CERTS_PATH=/var/lib/tailscale/certs  # override cert dir; NAS bind-mount is /volume1/docker/tailscale/certs
+# TAILSCALE_HOSTNAME=                        # fallback FQDN when APP_BASE_URL is not https://
 ```
 
 **Without `INITIAL_ADMIN_EMAIL` set on a fresh DB, every authenticated request returns 401**: bootstrap logs a warning and refuses to create an admin (intentional — refusing to start would break Docker restart loops on misconfig). Symptom: `/api/auth/me` 401, login form rejects every credential. Fix: set the env var, restart the api container.
