@@ -8,6 +8,7 @@ import { createRouter, createMemoryHistory } from 'vue-router'
 import { createPinia } from 'pinia'
 
 import AppLayout from '../../src/components/AppLayout.vue'
+import { useAuthStore } from '../../src/stores/auth.js'
 
 function makeRouter(initial = '/wiki') {
   const router = createRouter({
@@ -23,12 +24,17 @@ function makeRouter(initial = '/wiki') {
   return router
 }
 
-async function mountLayout(initial = '/wiki') {
+async function mountLayout(initial = '/wiki', { role } = {}) {
   const router = makeRouter(initial)
   await router.isReady()
-  return mount(AppLayout, {
-    global: { plugins: [router, createPinia()] },
-  })
+  const pinia = createPinia()
+  const wrapper = mount(AppLayout, { global: { plugins: [router, pinia] } })
+  if (role) {
+    const auth = useAuthStore(pinia)
+    auth.currentUser = { id: 'u1', email: 'a@b.com', name: 'A', role, picture_url: null }
+  }
+  await wrapper.vm.$nextTick()
+  return wrapper
 }
 
 describe('AppLayout — responsive shape', () => {
@@ -80,6 +86,20 @@ describe('AppLayout — responsive shape', () => {
       expect(cls).toMatch(/bg-notion-tint-lavender/)
       expect(cls).toMatch(/text-notion-brand-purple-800/)
     }
+  })
+})
+
+describe('AppLayout — admin nav slot (nas-https)', () => {
+  it('admin sees 证书与 Tailscale 状态 link to /admin/cert in sidebar', async () => {
+    const wrapper = await mountLayout('/wiki', { role: 'admin' })
+    const link = wrapper.find('a[href="/admin/cert"]')
+    expect(link.exists()).toBe(true)
+    expect(link.text()).toContain('证书与 Tailscale 状态')
+  })
+
+  it('member does not see /admin/cert link', async () => {
+    const wrapper = await mountLayout('/wiki', { role: 'member' })
+    expect(wrapper.find('a[href="/admin/cert"]').exists()).toBe(false)
   })
 })
 

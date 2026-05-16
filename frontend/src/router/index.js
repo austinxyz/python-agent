@@ -8,6 +8,7 @@ import LoginView from '../views/LoginView.vue'
 import AcceptInviteView from '../views/AcceptInviteView.vue'
 import ChangePasswordView from '../views/ChangePasswordView.vue'
 import MeView from '../views/MeView.vue'
+import AdminCertView from '../views/AdminCertView.vue'
 
 const router = createRouter({
   history: createWebHistory(),
@@ -21,7 +22,8 @@ const router = createRouter({
     { path: '/ingest', component: IngestView, meta: { requiresAuth: true } },
     { path: '/chat', component: ChatView, meta: { requiresAuth: true } },
     { path: '/private', component: PrivateView, meta: { requiresAuth: true } },
-    // /admin/* routes register in multi-user-auth-admin-ui change.
+    { path: '/admin/cert', component: AdminCertView, meta: { requiresAuth: true, requiresAdmin: true } },
+    // /admin/users registers in multi-user-auth-admin-ui change.
   ],
 })
 

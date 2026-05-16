@@ -18,6 +18,7 @@
 
 **✅ 完成标志：** 记下这个 tailnet 名（= `TAILNET_NAME`），比如 `tail-abc123`。NAS 最终的 URL 会是 `python-agent.<TAILNET_NAME>.ts.net`。
 
+tail67f33e.ts.net
 ---
 
 ## 1.2 验证 free 档够用

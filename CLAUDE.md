@@ -117,11 +117,38 @@ docker login                         # one-time
 
 Two repos: `xuaustin/python-agent-api`, `xuaustin/python-agent-frontend` (public).
 
+### Tailscale HTTPS (one-time NAS setup)
+
+The NAS is accessed via Tailscale at `https://python-agent.tail67f33e.ts.net`. The Tailscale daemon runs as a Docker container (not a system service — UGOS App Center has no Tailscale).
+
+```bash
+# 1. Container already created via UGOS Docker UI (image: tailscale/tailscale:stable,
+#    network: host, caps: NET_ADMIN + NET_RAW, device: /dev/net/tun,
+#    volume: /volume1/docker/tailscale → /var/lib/tailscale, TS_HOSTNAME=python-agent).
+
+# 2. Join tailnet (one-time):
+docker exec tailscale tailscale up
+# Opens auth URL on stdout — open in browser logged into Tailscale (admin account).
+
+# 3. Request cert (one-time; auto-renews thereafter):
+docker exec tailscale tailscale cert python-agent.tail67f33e.ts.net
+# Writes to /var/lib/tailscale/certs/ inside container = /volume1/docker/tailscale/certs/ on host.
+
+# 4. Set up reverse proxy (one-time; survives Tailscale container restarts):
+docker exec tailscale tailscale serve --https=443 http://localhost:8910
+# Because the container uses --network=host, localhost:8910 is the NAS host's loopback
+# where python-agent-frontend binds (127.0.0.1:8910:3000 in docker-compose.prod.yml).
+```
+
+**Pitfall: Tailscale serve config is NOT in git.** Container restarts preserve the config; only a container delete + recreate requires re-running step 4. The cert in `/var/lib/tailscale/certs/` is preserved by the bind mount at `/volume1/docker/tailscale/`.
+
+**Pitfall: cert path for `GET /api/admin/cert-status`.** The backend reads from `TAILSCALE_CERTS_PATH` (default `/var/lib/tailscale/certs`). On NAS, set `TAILSCALE_CERTS_PATH=/tailscale/certs` in `.env`; `docker-compose.prod.yml` mounts `/volume1/docker/tailscale/certs:/tailscale/certs:ro` into the api container. Without the bind-mount, cert-status returns the offline fallback because the file doesn't exist inside the container.
+
 ### Update the NAS (no ssh)
 
 1. UGOS Docker app → **Project** → python-agent → **Pull** (refreshes `:latest`)
 2. **Restart** (or **Apply**)
-3. Browser: `http://10.0.0.20:8910` — verify
+3. Browser: `https://python-agent.tail67f33e.ts.net` (on a Tailscale-connected device) — verify
 
 ### Rollback
 
@@ -129,7 +156,7 @@ In UGOS file manager, edit `/volume1/docker/python-agent/docker-compose.yml` —
 
 ### Ports on NAS
 
-`8910` frontend · `8911` api. **Qdrant intentionally not exposed** — v1.9 has no auth, so binding to the LAN would let any device read/write vectors. The api talks to qdrant on the docker internal network (`qdrant:6333`); for ad-hoc debug use `docker exec` from the NAS host. If a host port collides at first deploy, edit `docker-compose.yml` and re-Apply.
+`8910` frontend (loopback-only — bound to `127.0.0.1:8910`, not LAN) · `8911` api (LAN-accessible, intentional — lets admin tools on the home network call the api directly; all sensitive endpoints are session-protected). **Qdrant intentionally not exposed.** `8910` is not LAN-reachable after `nas-https`; frontend access is via `tailscale serve` only. Qdrant v1.9 has no auth — the api talks to it on the docker internal network (`qdrant:6333`); use `docker exec` from the NAS host for ad-hoc debug.
 
 ## Known Pitfalls (past mistakes)
 

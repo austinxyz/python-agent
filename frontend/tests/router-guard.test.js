@@ -140,6 +140,32 @@ describe('router guard — logged-in user', () => {
   })
 })
 
+describe('router guard — /admin/cert (nas-https)', () => {
+  beforeEach(async () => {
+    // Reset router away from /admin/cert so each test triggers beforeEach freshly.
+    await router.push('/login').catch(() => {})
+  })
+
+  it('admin reaches /admin/cert', async () => {
+    setupAuth({ user: fakeUser({ role: 'admin' }) })
+    const r = await pushAndSettle('/admin/cert')
+    expect(r.path).toBe('/admin/cert')
+  })
+
+  it('member is redirected to /chat', async () => {
+    setupAuth({ user: fakeUser({ role: 'member' }) })
+    const r = await pushAndSettle('/admin/cert')
+    expect(r.path).toBe('/chat')
+  })
+
+  it('logged-out is redirected to /login with redirect=/admin/cert', async () => {
+    setupAuth({ user: null })
+    const r = await pushAndSettle('/admin/cert')
+    expect(r.path).toBe('/login')
+    expect(r.query.redirect).toBe('/admin/cert')
+  })
+})
+
 describe('router guard — fetchMe is called when currentUser is null', () => {
   it('fetchMe runs once on first protected navigation', async () => {
     setActivePinia(createPinia())

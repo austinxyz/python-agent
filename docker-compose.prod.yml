@@ -29,6 +29,7 @@ services:
     volumes:
       - ./data/sqlite:/app/data
       - ./data/uploads:/app/uploads
+      - /volume1/docker/tailscale/certs:/tailscale/certs:ro
     depends_on:
       qdrant:
         condition: service_healthy
@@ -38,6 +39,6 @@ services:
     container_name: python-agent-frontend
     restart: unless-stopped
     ports:
-      - "8910:3000"
+      - "127.0.0.1:8910:3000"
     depends_on:
       - api

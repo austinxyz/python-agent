@@ -78,8 +78,9 @@ class TestProdComposeShape:
 
     def test_host_ports(self):
         cfg = _load_prod_compose()
-        # frontend + api are intentionally exposed for browser + client access.
-        assert "8910:3000" in cfg["services"]["frontend"]["ports"]
+        # nas-https: frontend is loopback-only so tailscale serve reaches localhost:8910
+        # but the LAN cannot. api remains LAN-accessible (intentional for admin tools).
+        assert "127.0.0.1:8910:3000" in cfg["services"]["frontend"]["ports"]
         assert "8911:5000" in cfg["services"]["api"]["ports"]
 
     def test_qdrant_not_exposed_on_host(self):
@@ -101,6 +102,13 @@ class TestProdComposeShape:
         # qdrant: ./data/qdrant -> /qdrant/storage
         qdrant_volumes = cfg["services"]["qdrant"]["volumes"]
         assert "./data/qdrant:/qdrant/storage" in qdrant_volumes
+
+    def test_tailscale_certs_readonly_mount_in_api(self):
+        """nas-https: api needs read-only access to Tailscale certs to serve cert-status.
+        Without this, GET /api/admin/cert-status returns the offline fallback on the NAS."""
+        cfg = _load_prod_compose()
+        api_volumes = cfg["services"]["api"]["volumes"]
+        assert "/volume1/docker/tailscale/certs:/tailscale/certs:ro" in api_volumes
 
     def test_no_top_level_volumes_block(self):
         cfg = _load_prod_compose()

@@ -27,6 +27,15 @@
         @click="$router.push('/change-password')"
       >🔑 修改密码</button>
 
+      <!-- Admin section -->
+      <div v-if="isAdmin" class="flex flex-col gap-2">
+        <div class="text-[11px] font-semibold text-notion-stone uppercase tracking-wider px-1">管理</div>
+        <router-link
+          to="/admin/cert"
+          class="text-left bg-notion-canvas border border-notion-hairline rounded-md px-3 py-3 text-[13px] text-notion-charcoal"
+        >⚙ 证书与 Tailscale 状态</router-link>
+      </div>
+
       <button
         data-me-logout
         class="text-left bg-notion-canvas border border-notion-tint-rose rounded-md px-3 py-3 text-[13px] text-notion-error"
