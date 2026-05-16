@@ -86,7 +86,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth.js'
 import { safeRedirect } from '../utils/safe-redirect.js'
@@ -99,12 +99,57 @@ const email = ref('')
 const password = ref('')
 const submitting = ref(false)
 const errorText = ref('')
+const gsiReady = ref(false)
 
 onMounted(() => {
   if (auth.config === null) {
     auth.fetchConfig()
   }
 })
+
+watch(() => auth.config, (cfg) => {
+  if (cfg?.has_google && cfg?.google_client_id) {
+    loadGsi(cfg.google_client_id)
+  }
+}, { immediate: true })
+
+function loadGsi(clientId) {
+  if (typeof window === 'undefined') return
+  if (document.getElementById('gsi-script')) {
+    initGsi(clientId)
+    return
+  }
+  const script = document.createElement('script')
+  script.id = 'gsi-script'
+  script.src = 'https://accounts.google.com/gsi/client'
+  script.async = true
+  script.defer = true
+  script.onload = () => initGsi(clientId)
+  document.head.appendChild(script)
+}
+
+function initGsi(clientId) {
+  window.google?.accounts?.id?.initialize({
+    client_id: clientId,
+    callback: handleGoogleCredential,
+    auto_select: false,
+    cancel_on_tap_outside: true,
+  })
+  gsiReady.value = true
+}
+
+async function handleGoogleCredential(response) {
+  errorText.value = ''
+  submitting.value = true
+  try {
+    await auth.loginWithGoogle(response.credential)
+    router.push(safeRedirect(route.query.redirect))
+  } catch (err) {
+    errorText.value = err?.response?.data?.error ?? err?.message ?? 'Google 登录失败'
+  } finally {
+    submitting.value = false
+  }
+}
 
 const isLocalhost = computed(() => {
   const h = typeof window !== 'undefined' ? window.location?.hostname ?? '' : ''
@@ -133,9 +178,10 @@ async function onSubmit() {
 }
 
 async function onGoogleSignIn() {
-  // GSI button placeholder — full Google Identity Services integration
-  // (loading the script + rendering the official button) is a follow-up.
-  // For now this surfaces a clear message so the flow is testable.
-  errorText.value = 'Google 登录需要加载 GSI script (待补全)'
+  if (!gsiReady.value || !window.google?.accounts?.id) {
+    errorText.value = 'Google 登录加载中，请稍候再试'
+    return
+  }
+  window.google.accounts.id.prompt()
 }
 </script>
