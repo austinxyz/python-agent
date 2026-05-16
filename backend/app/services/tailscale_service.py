@@ -24,7 +24,9 @@ _NULL_CERT = {
 
 def get_cert_status(hostname: str) -> dict:
     """Return 5-field dict. Never raises."""
-    # --- daemon status ---
+    # --- daemon status (best-effort; CLI may not be present in the api container) ---
+    ts_status = "offline"
+    cli_available = False
     try:
         proc = subprocess.run(
             ["tailscale", "status", "--json"],
@@ -32,9 +34,10 @@ def get_cert_status(hostname: str) -> dict:
         )
         data = json.loads(proc.stdout)
         ts_status = "online" if data.get("BackendState") == "Running" else "degraded"
+        cli_available = True
     except Exception as exc:
         logger.debug("tailscale status failed: %s", exc)
-        return {"hostname": hostname, "tailscale_status": "offline", **_NULL_CERT}
+        # Don't return early — still attempt cert read below.
 
     # --- cert metadata ---
     cert_dir = os.environ.get("TAILSCALE_CERTS_PATH", "/var/lib/tailscale/certs")
@@ -49,6 +52,11 @@ def get_cert_status(hostname: str) -> dict:
         last_renew = datetime.fromtimestamp(cert_path.stat().st_mtime, tz=timezone.utc)
         # Negative when cert is already expired — intentional, frontend handles it.
         days_remaining = (expiry - datetime.now(timezone.utc)).days
+
+        # When the CLI is unavailable (e.g. NAS api container), infer online from
+        # a valid cert: Tailscale must be running to provision and auto-renew it.
+        if not cli_available and days_remaining > 0:
+            ts_status = "online"
 
         return {
             "hostname": hostname,
