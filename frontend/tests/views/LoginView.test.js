@@ -34,12 +34,14 @@ async function mountLogin({ config = CONFIG_WITH_GOOGLE, googleReady = true } = 
 
   if (googleReady) {
     window.google = {
-      accounts: {
-        id: {
-          initialize: vi.fn(),
-          prompt: vi.fn(),
-        },
-      },
+      accounts: { id: { initialize: vi.fn(), prompt: vi.fn() } },
+    }
+    // Pre-inject the script tag so loadGsi() calls initGsi() immediately
+    // (happy-dom never fires onload for external scripts).
+    if (!document.getElementById('gsi-script')) {
+      const s = document.createElement('script')
+      s.id = 'gsi-script'
+      document.head.appendChild(s)
     }
   } else {
     delete window.google
@@ -56,6 +58,7 @@ describe('LoginView — Google Sign-In', () => {
   afterEach(() => {
     vi.clearAllMocks()
     delete window.google
+    document.getElementById('gsi-script')?.remove()
   })
 
   it('shows Google button when config.has_google is true and protocol is http (localhost)', async () => {
@@ -69,10 +72,11 @@ describe('LoginView — Google Sign-In', () => {
     expect(window.google.accounts.id.prompt).toHaveBeenCalled()
   })
 
-  it('shows loading message when GSI not ready and button clicked', async () => {
+  it('button shows loading text and is disabled when GSI not ready', async () => {
     const { wrapper } = await mountLogin({ googleReady: false })
-    await wrapper.find('[data-google-signin]').trigger('click')
-    expect(wrapper.text()).toContain('Google 登录加载中')
+    const btn = wrapper.find('[data-google-signin]')
+    expect(btn.text()).toContain('Google 登录加载中')
+    expect(btn.attributes('disabled')).toBeDefined()
   })
 
   it('loginWithGoogle called and redirects to /chat on valid credential', async () => {
