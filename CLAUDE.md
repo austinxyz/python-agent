@@ -135,7 +135,9 @@ docker exec tailscale tailscale cert python-agent.tail67f33e.ts.net
 # Writes to /var/lib/tailscale/certs/ inside container = /volume1/docker/tailscale/certs/ on host.
 
 # 4. Set up reverse proxy (one-time; survives Tailscale container restarts):
-docker exec tailscale tailscale serve --https=443 http://localhost:8910
+docker exec tailscale tailscale serve --bg --https=443 http://localhost:8910
+# --bg is required: without it the command blocks the terminal and the serve config
+# is lost when you Ctrl-C. With --bg it runs in the background and persists.
 # Because the container uses --network=host, localhost:8910 is the NAS host's loopback
 # where python-agent-frontend binds (127.0.0.1:8910:3000 in docker-compose.prod.yml).
 ```
@@ -188,6 +190,8 @@ In UGOS file manager, edit `/volume1/docker/python-agent/docker-compose.yml` —
 
 ### Frontend UI Validation
 
+- **Google `renderButton()` does not render on iOS (any browser).** All iOS browsers use WebKit, which blocks third-party iframes from `accounts.google.com`. The button renders fine on desktop Chrome/Edge but the container stays empty on iPhone. `google.accounts.id.prompt()` (One Tap) is also suppressed on mobile. For now, iOS users must use email+password. If mobile Google Sign-In is needed in future, implement the redirect-based OAuth 2.0 code flow (requires `GOOGLE_CLIENT_SECRET` + new backend callback endpoint).
+- **Vue template ref + `watch({ immediate: true })` timing**: When a watch with `immediate: true` fires during component setup, the template hasn't rendered yet and `ref(null)` template refs are still null. Calling `nextTick()` inside the watch callback is insufficient if the watched reactive value changes before mount. Use a combined `watch([reactiveFlag, templateRef], ([flag, el]) => { if (flag && el) { ... } })` so the handler fires whenever either dependency resolves — covering all ordering scenarios.
 - **vitest + happy-dom catches behavior, not layout.** Component tests with `@vue/test-utils` verify `data-*` selectors and store calls; they cannot tell you whether the layout is right. The original 5.x `PrivateView` passed all 11 vitest tests but was rejected on first sight after deploy — the tests verified that buttons existed and called the right actions, not that the page looked usable. Lesson: for any UX-touching change, treat the deploy + browser walkthrough as a required step, not an optional QA phase.
 - **Once a UX is validated, lock the flow in with Playwright.** The project has Playwright wired up at `frontend/e2e/` (`npm run e2e` headless, `npm run e2e:headed` for debugging). Tests run against the user-managed docker stack — bring it up first with `docker compose up -d`. Test data is isolated by the reserved `__e2e_*` title prefix and cleaned up via `afterEach`, even on failure. **Workflow:** first deploy = human eyes; once UX is signed off, add a Playwright spec covering that flow before moving on. Playwright catches regressions; it does NOT validate fresh designs.
 

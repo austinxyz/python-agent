@@ -149,6 +149,23 @@
 
 ---
 
+### `nas-https` ✅ 已实现
+**用户故事**：家人通过 Tailscale 网络从任意设备（蜂窝/WiFi/外网）访问 python-agent，浏览器显示绿色 TLS 锁；管理员可在 `/admin/cert` 页面查看证书到期状态和 Tailscale 连接健康度。
+**覆盖需求**：`docs/superpowers/specs/2026-05-10-nas-https-requirements.md`
+**后台**：
+- Tailscale daemon（UGOS App Center）+ `tailscale serve --https=443 http://localhost:8910`（Tailscale 同时承担 TLS 终止 + 反向代理）
+- `tailscale_service.py`：读取 `tailscale status --json`（subprocess）+ `cryptography` 解析证书到期；CLI 不可用时从有效证书文件推断 online 状态
+- `@require_admin` 中间件装饰器（`@require_auth` + admin 角色校验，403 for member）
+- `GET /api/admin/cert-status`（admin-only）：返回 `{hostname, cert_expiry_iso, days_remaining, tailscale_status, last_renew_iso}`
+**前台**：
+- `AdminCertView.vue`：60s 轮询 cert-status，三态 pill（健康/即将到期/异常），transient 失败保留上次好数据
+- 路由 `/admin/cert`（`requiresAuth + requiresAdmin`，non-admin 重定向 `/chat`）
+- `AppLayout.vue` 侧边栏 admin section（Shield 图标）+ `MeView.vue` 管理区块
+- `LoginView.vue` Google Sign-In：`renderButton()` 在 HTTPS 源下显示官方按钮（桌面端）
+**验收标准**：Tailscale 连接设备打开 `https://python-agent.<tailnet-id>.ts.net/`，绿锁无警告；`/admin/cert` 显示健康状态与真实证书到期日；蜂窝网络访问正常；旧 LAN URL `http://10.0.0.20:8910/` 无法访问。
+
+---
+
 ### `chat-qa`
 **用户故事**：用户可以基于知识库和私有数据进行多轮对话，AI 回答实时流式输出并显示来源引用；用户可以把好的回答保存为私有笔记（自定义名称 + 目录）；历史会话可以继续。
 
@@ -186,6 +203,7 @@
 |--------|----------------|------|
 | `2026-05-06-ingest-redesign` | `ingest` | 2026-05-06 |
 | `2026-05-10-multi-user-auth-core` | `multi-user-auth` · `frontend-scaffold` | 2026-05-10 |
+| `2026-05-17-nas-https` | `nas-https` · `multi-user-auth` · `frontend-scaffold` | 2026-05-17 |
 
 ---
 
