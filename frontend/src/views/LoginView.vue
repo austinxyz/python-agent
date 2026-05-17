@@ -64,7 +64,7 @@
             <div class="flex-1 h-px bg-notion-hairline"></div>
           </div>
           <!-- Container always in DOM so googleBtnContainer ref is available for renderButton() -->
-          <div ref="googleBtnContainer" data-google-signin class="flex justify-center">
+          <div ref="googleBtnContainer" data-google-signin class="w-full">
             <div
               v-if="!gsiReady"
               class="h-[40px] w-full rounded-md text-[13px] text-notion-muted-text bg-notion-canvas border border-notion-hairline-strong flex items-center justify-center"
@@ -143,10 +143,6 @@ function initGsi(clientId) {
       type: 'standard',
       theme: 'outline',
       size: 'large',
-      text: 'signin_with',
-      shape: 'rectangular',
-      width: googleBtnContainer.value.offsetWidth || 320,
-      locale: 'zh-CN',
     })
   } catch (e) {
     // renderButton may throw for unauthorized origins
