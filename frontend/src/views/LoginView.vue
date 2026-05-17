@@ -79,7 +79,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch, nextTick } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth.js'
 import { safeRedirect } from '../utils/safe-redirect.js'
@@ -107,11 +107,18 @@ watch(() => auth.config, (cfg) => {
   }
 }, { immediate: true })
 
+// Render the button as soon as BOTH the script is ready AND the container div exists.
+// Using a combined watch handles all timing orderings between gsiReady and the template ref.
+watch([gsiReady, googleBtnContainer], ([ready, container]) => {
+  if (ready && container && auth.config?.google_client_id) {
+    initGsi(auth.config.google_client_id)
+  }
+})
+
 function loadGsi(clientId) {
   if (typeof window === 'undefined') return
   if (document.getElementById('gsi-script')) {
     gsiReady.value = true
-    nextTick(() => initGsi(clientId))
     return
   }
   const script = document.createElement('script')
@@ -119,34 +126,30 @@ function loadGsi(clientId) {
   script.src = 'https://accounts.google.com/gsi/client'
   script.async = true
   script.defer = true
-  script.onload = () => {
-    gsiReady.value = true
-    nextTick(() => initGsi(clientId))
-  }
+  script.onload = () => { gsiReady.value = true }
   script.onerror = () => { gsiReady.value = true }
   document.head.appendChild(script)
 }
 
 function initGsi(clientId) {
+  if (!window.google?.accounts?.id) return
   try {
-    window.google?.accounts?.id?.initialize({
+    window.google.accounts.id.initialize({
       client_id: clientId,
       callback: handleGoogleCredential,
       auto_select: false,
     })
-    if (googleBtnContainer.value) {
-      window.google.accounts.id.renderButton(googleBtnContainer.value, {
-        type: 'standard',
-        theme: 'outline',
-        size: 'large',
-        text: 'signin_with',
-        shape: 'rectangular',
-        width: googleBtnContainer.value.offsetWidth || 320,
-        locale: 'zh-CN',
-      })
-    }
+    window.google.accounts.id.renderButton(googleBtnContainer.value, {
+      type: 'standard',
+      theme: 'outline',
+      size: 'large',
+      text: 'signin_with',
+      shape: 'rectangular',
+      width: googleBtnContainer.value.offsetWidth || 320,
+      locale: 'zh-CN',
+    })
   } catch (e) {
-    // initialize/renderButton may throw for unauthorized origins
+    // renderButton may throw for unauthorized origins
   }
 }
 
