@@ -48,7 +48,7 @@
 
 - [x] 4.1 Edit `docker-compose.prod.yml` — change `"8910:3000"` → `"127.0.0.1:8910:3000"`. This binds the host port only to the loopback interface, so Tailscale serve can still reach `localhost:8910` but the LAN cannot.
 
-- [ ] 4.2 Update NAS `.env` (UGOS file manager) — **MANUAL: do during Group 5 deploy**:
+- [x] 4.2 Update NAS `.env` (UGOS file manager) — **MANUAL: do during Group 5 deploy**:
   - REMOVE `SESSION_COOKIE_SECURE=false` (let it default to `true`)
   - CHANGE `APP_BASE_URL=http://10.0.0.20:8910` → `APP_BASE_URL=https://python-agent.tail67f33e.ts.net`
   - ADD `GOOGLE_CLIENT_ID=<from task 1.7>`
@@ -58,12 +58,12 @@
 
 ## 5. Ship + smoke
 
-- [ ] 5.1 `./scripts/build-and-push.sh` — pushes new images `xuaustin/python-agent-{api,frontend}:vYYYYMMDD-<sha>` + `:latest`.
-- [ ] 5.2 NAS UGOS Docker → python-agent project → Pull → Apply. Wait for both containers to settle.
-- [ ] 5.3 On NAS shell, confirm `tailscale serve status` shows the mapping `https://python-agent.<TAILNET_ID>.ts.net:443` → `http://localhost:8910`. If missing, re-run `tailscale serve --https=443 http://localhost:8910`.
-- [ ] 5.4 In a Tailscale-connected browser: open `https://python-agent.<TAILNET_ID>.ts.net/` — should hit `/login` (redirect from `/chat` since session is invalidated). Verify green-lock TLS, no warning.
-- [ ] 5.5 Log in as admin (email + password). Verify redirect to `/chat`. Navigate to `/admin/cert` — should render healthy state with real values.
-- [ ] 5.6 Test Google Sign-In: from logout state, click Google button on LoginView (should be visible since `config.has_google` is true after `GOOGLE_CLIENT_ID` is set + HTTPS detected). Complete Google flow. Verify auto-link to existing admin row.
+- [x] 5.1 `./scripts/build-and-push.sh` — pushes new images `xuaustin/python-agent-{api,frontend}:vYYYYMMDD-<sha>` + `:latest`. (v20260516-2694f48)
+- [x] 5.2 NAS UGOS Docker → python-agent project → Pull → Apply. Wait for both containers to settle.
+- [x] 5.3 On NAS shell, confirm `tailscale serve status` shows the mapping `https://python-agent.<TAILNET_ID>.ts.net:443` → `http://localhost:8910`. If missing, re-run `tailscale serve --bg --https=443 http://localhost:8910`.
+- [x] 5.4 In a Tailscale-connected browser: open `https://python-agent.<TAILNET_ID>.ts.net/` — should hit `/login` (redirect from `/chat` since session is invalidated). Verify green-lock TLS, no warning.
+- [x] 5.5 Log in as admin (email + password). Verify redirect to `/chat`. Navigate to `/admin/cert` — should render healthy state with real values.
+- [x] 5.6 Test Google Sign-In: from logout state, click Google button on LoginView (should be visible since `config.has_google` is true after `GOOGLE_CLIENT_ID` is set + HTTPS detected). Complete Google flow. Verify auto-link to existing admin row.
 - [ ] 5.7 Test off-LAN access: turn off device WiFi, switch to cellular. Re-open `https://python-agent.<TAILNET_ID>.ts.net/` — should still work (proves it's tailnet routing, not LAN-IP).
 - [ ] 5.8 Notify family: send each a Tailscale invitation link + a one-paragraph note. Help one family member through the install on a video call to confirm the flow works end-to-end.
 - [ ] 5.9 Confirm old URL is dead: in a browser without Tailscale connected, try `http://10.0.0.20:8910/` — should be `ERR_CONNECTION_REFUSED` (no port published to LAN anymore).

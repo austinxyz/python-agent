@@ -63,18 +63,13 @@
             <span>或</span>
             <div class="flex-1 h-px bg-notion-hairline"></div>
           </div>
-          <!-- Google renders its official button here via renderButton() -->
-          <div
-            v-if="gsiReady"
-            ref="googleBtnContainer"
-            data-google-signin
-            class="flex justify-center"
-          ></div>
-          <div
-            v-else
-            data-google-signin
-            class="h-[40px] rounded-md text-[13px] text-notion-muted-text bg-notion-canvas border border-notion-hairline-strong flex items-center justify-center"
-          >Google 登录加载中…</div>
+          <!-- Container always in DOM so googleBtnContainer ref is available for renderButton() -->
+          <div ref="googleBtnContainer" data-google-signin class="flex justify-center">
+            <div
+              v-if="!gsiReady"
+              class="h-[40px] w-full rounded-md text-[13px] text-notion-muted-text bg-notion-canvas border border-notion-hairline-strong flex items-center justify-center"
+            >Google 登录加载中…</div>
+          </div>
         </template>
 
         <p class="text-[11px] text-notion-stone text-center mt-2">没账号？请管理员发邀请链接</p>
