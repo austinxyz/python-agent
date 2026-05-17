@@ -64,9 +64,9 @@
 - [x] 5.4 In a Tailscale-connected browser: open `https://python-agent.<TAILNET_ID>.ts.net/` — should hit `/login` (redirect from `/chat` since session is invalidated). Verify green-lock TLS, no warning.
 - [x] 5.5 Log in as admin (email + password). Verify redirect to `/chat`. Navigate to `/admin/cert` — should render healthy state with real values.
 - [x] 5.6 Test Google Sign-In: from logout state, click Google button on LoginView (should be visible since `config.has_google` is true after `GOOGLE_CLIENT_ID` is set + HTTPS detected). Complete Google flow. Verify auto-link to existing admin row.
-- [ ] 5.7 Test off-LAN access: turn off device WiFi, switch to cellular. Re-open `https://python-agent.<TAILNET_ID>.ts.net/` — should still work (proves it's tailnet routing, not LAN-IP).
-- [ ] 5.8 Notify family: send each a Tailscale invitation link + a one-paragraph note. Help one family member through the install on a video call to confirm the flow works end-to-end.
-- [ ] 5.9 Confirm old URL is dead: in a browser without Tailscale connected, try `http://10.0.0.20:8910/` — should be `ERR_CONNECTION_REFUSED` (no port published to LAN anymore).
+- [x] 5.7 Test off-LAN access: turn off device WiFi, switch to cellular. Re-open `https://python-agent.<TAILNET_ID>.ts.net/` — should still work (proves it's tailnet routing, not LAN-IP).
+- [x] 5.8 Notify family: send each a Tailscale invitation link + a one-paragraph note. Help one family member through the install on a video call to confirm the flow works end-to-end.
+- [x] 5.9 Confirm old URL is dead: in a browser without Tailscale connected, try `http://10.0.0.20:8910/` — should be `ERR_CONNECTION_REFUSED` (no port published to LAN anymore).
 - [ ] 5.Z Run superpowers:requesting-code-review on the diff for group 5 — N/A (ops only). Skip.
 
 ## 6. Verification + close
