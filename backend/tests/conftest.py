@@ -24,12 +24,18 @@ def env_vars(tmp_path, monkeypatch):
 _AUTH_TEST_FILES = (
     "test_auth_routes.py",
     "test_middleware_require_auth.py",
+    "test_middleware_require_admin.py",
     "test_auth_service_password.py",
     "test_auth_service_google.py",
     "test_users_schema.py",
     "test_email_canonicalization.py",
     "test_bootstrap_migration.py",
     "test_admin_routes.py",
+    "test_admin_users_list.py",
+    "test_admin_users_invite.py",
+    "test_admin_users_patch.py",
+    "test_admin_users_delete.py",
+    "test_admin_users_resend_invite.py",
 )
 
 

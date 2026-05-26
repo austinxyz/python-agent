@@ -9,6 +9,7 @@ import AcceptInviteView from '../views/AcceptInviteView.vue'
 import ChangePasswordView from '../views/ChangePasswordView.vue'
 import MeView from '../views/MeView.vue'
 import AdminCertView from '../views/AdminCertView.vue'
+import AdminUsersView from '../views/AdminUsersView.vue'
 
 const router = createRouter({
   history: createWebHistory(),
@@ -23,7 +24,7 @@ const router = createRouter({
     { path: '/chat', component: ChatView, meta: { requiresAuth: true } },
     { path: '/private', component: PrivateView, meta: { requiresAuth: true } },
     { path: '/admin/cert', component: AdminCertView, meta: { requiresAuth: true, requiresAdmin: true } },
-    // /admin/users registers in multi-user-auth-admin-ui change.
+    { path: '/admin/users', component: AdminUsersView, meta: { requiresAuth: true, requiresAdmin: true } },
   ],
 })
 

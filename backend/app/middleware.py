@@ -60,7 +60,7 @@ def require_admin(view_func):
         if user is None:
             return _clear_session_and_401()
         if user.role != "admin":
-            return jsonify({"error": "admin required"}), 403
+            return jsonify({"error": "admin access required"}), 403
         g.user = user
         return view_func(*args, **kwargs)
 

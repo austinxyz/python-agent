@@ -76,7 +76,7 @@ class TestRequireAdmin:
         monkeypatch.setattr("app.middleware._validate_session", lambda: _MEMBER)
         resp = admin_client.get("/admin-only")
         assert resp.status_code == 403
-        assert resp.get_json() == {"error": "admin required"}
+        assert resp.get_json() == {"error": "admin access required"}
 
     def test_unauthenticated_gets_401(self, admin_client, monkeypatch):
         monkeypatch.setattr("app.middleware._validate_session", lambda: None)
@@ -118,7 +118,7 @@ class TestCertStatus:
         monkeypatch.setattr("app.middleware._validate_session", lambda: _MEMBER)
         resp = client.get("/api/admin/cert-status")
         assert resp.status_code == 403
-        assert resp.get_json() == {"error": "admin required"}
+        assert resp.get_json() == {"error": "admin access required"}
 
     def test_unauthenticated_gets_401(self, client, monkeypatch):
         monkeypatch.setattr("app.middleware._validate_session", lambda: None)

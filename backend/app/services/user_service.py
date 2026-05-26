@@ -13,6 +13,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Any
 
 from .auth_service import canonicalize_email, hash_password
+from .qdrant_service import QdrantService
 
 logger = logging.getLogger(__name__)
 
@@ -298,6 +299,29 @@ def bootstrap_initial_admin(
         logger.info("[BOOTSTRAP] migrated %s rows from user_id='default' to admin", rewritten)
 
     return admin
+
+
+def delete_user_cascading(user_id: str, qdrant_svc=None) -> None:
+    """Delete a user and all their owned data. Qdrant vectors first, then SQLite.
+
+    Ordering is intentional (per design R-04): if SQLite delete fails after Qdrant
+    succeeds, the user row still exists and the state is recoverable (re-run).
+    The inverse (SQLite success, Qdrant orphan) is harder to recover.
+    """
+    from .db_service import DatabaseService
+
+    if qdrant_svc is None:
+        qdrant_svc = QdrantService()
+
+    qdrant_svc.delete_private_by_user_id(user_id)
+
+    db = DatabaseService()
+    with db.connection() as conn:
+        conn.execute("DELETE FROM private_entries WHERE user_id = ?", (user_id,))
+        conn.execute("DELETE FROM notes WHERE user_id = ?", (user_id,))
+        conn.execute("DELETE FROM chat_sessions WHERE user_id = ?", (user_id,))
+        conn.execute("DELETE FROM invite_tokens WHERE user_id = ?", (user_id,))
+        conn.execute("DELETE FROM users WHERE id = ?", (user_id,))
 
 
 def migrate_default_user_data(

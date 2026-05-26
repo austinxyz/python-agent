@@ -75,16 +75,18 @@ SESSION_COOKIE_SECURE=false                  # set true once HTTPS lands
 
 **Without `INITIAL_ADMIN_EMAIL` set on a fresh DB, every authenticated request returns 401**: bootstrap logs a warning and refuses to create an admin (intentional — refusing to start would break Docker restart loops on misconfig). Symptom: `/api/auth/me` 401, login form rejects every credential. Fix: set the env var, restart the api container.
 
-## Inviting users (multi-user-auth-core)
+## Managing users
 
-Until `multi-user-auth-admin-ui` ships, all invites go through the CLI inside the api container:
+Primary path: navigate to `/admin/users` in the web UI (admin-only sidebar item). From there you can invite new users, change roles, disable/re-enable accounts, and delete disabled accounts with a type-to-confirm gate.
+
+Admin's own bootstrap URL is printed once on first startup — find it via `docker logs python-agent-dev-api-1 | grep BOOTSTRAP`. Send invite URLs via 微信.
+
+**Emergency fallback (admin locked out, JS broken, debugging):** use the CLI inside the api container:
 
 ```bash
 docker exec python-agent-dev-api-1 python -m app.cli.invite_user wife@gmail.com member
 # stdout: Invite URL: http://localhost:3000/accept-invite?token=<32-byte>
 ```
-
-Send the URL via 微信. Admin's own bootstrap URL is printed once on first startup — find it via `docker logs python-agent-dev-api-1 | grep BOOTSTRAP`.
 
 ## Design Documents
 

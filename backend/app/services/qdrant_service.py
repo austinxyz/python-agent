@@ -101,6 +101,18 @@ class QdrantService:
             points_selector=models.PointIdsList(points=point_ids),
         )
 
+    def delete_private_by_user_id(self, user_id: str) -> None:
+        """Filter-delete all private vectors for a user (for user deletion)."""
+        flt = models.Filter(
+            must=[
+                models.FieldCondition(key="user_id", match=models.MatchValue(value=user_id)),
+            ]
+        )
+        self._client.delete(
+            collection_name=PRIVATE_COLLECTION,
+            points_selector=models.FilterSelector(filter=flt),
+        )
+
     def delete_private_by_source_file_id(self, user_id: str, source_file_id: str) -> None:
         """Filter-based delete for an entry's chunks.
 

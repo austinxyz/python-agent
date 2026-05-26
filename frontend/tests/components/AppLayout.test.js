@@ -103,6 +103,46 @@ describe('AppLayout — admin nav slot (nas-https)', () => {
   })
 })
 
+describe('AppLayout — admin users nav (multi-user-auth-admin-ui)', () => {
+  it('admin sees 用户管理 link to /admin/users in sidebar', async () => {
+    const wrapper = await mountLayout('/wiki', { role: 'admin' })
+    const link = wrapper.find('a[href="/admin/users"]')
+    expect(link.exists()).toBe(true)
+    expect(link.text()).toContain('用户管理')
+  })
+
+  it('member does not see /admin/users link', async () => {
+    const wrapper = await mountLayout('/wiki', { role: 'member' })
+    expect(wrapper.find('a[href="/admin/users"]').exists()).toBe(false)
+  })
+
+  it('logged-out user does not see /admin/users link', async () => {
+    const wrapper = await mountLayout('/wiki')
+    expect(wrapper.find('a[href="/admin/users"]').exists()).toBe(false)
+  })
+
+  it('/admin/users active state uses bg-notion-tint-lavender and text-notion-brand-purple-800', async () => {
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [
+        { path: '/admin/users', component: { template: '<div />' } },
+        { path: '/wiki', component: { template: '<div />' } },
+      ],
+    })
+    router.push('/admin/users')
+    await router.isReady()
+    const pinia = createPinia()
+    const wrapper = mount(AppLayout, { global: { plugins: [router, pinia] } })
+    const auth = useAuthStore(pinia)
+    auth.currentUser = { id: 'u1', email: 'a@b.com', name: 'A', role: 'admin', picture_url: null }
+    await wrapper.vm.$nextTick()
+    const link = wrapper.find('a[href="/admin/users"]')
+    expect(link.exists()).toBe(true)
+    expect(link.classes().join(' ')).toMatch(/bg-notion-tint-lavender/)
+    expect(link.classes().join(' ')).toMatch(/text-notion-brand-purple-800/)
+  })
+})
+
 describe('AppLayout — Notion design alignment', () => {
   it('logo no longer uses the legacy blue→purple gradient', async () => {
     const wrapper = await mountLayout()

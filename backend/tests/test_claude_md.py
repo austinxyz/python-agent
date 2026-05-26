@@ -64,3 +64,29 @@ class TestClaudeMdDeploymentSection:
         assert "tar -C" in rest or "flat layout" in rest or "tar `-C" in rest, (
             "Known Pitfalls must gain an entry covering the tar -C /src . flat-layout requirement"
         )
+
+
+class TestClaudeMdAdminUiUserManagement:
+    def test_admin_ui_is_primary_path(self):
+        content = _read()
+        assert "/admin/users" in content, (
+            "CLAUDE.md must reference /admin/users as the user management UI"
+        )
+        lower = content.lower()
+        assert "primary" in lower or "web ui" in lower or "web interface" in lower, (
+            "CLAUDE.md must position the web UI as the primary path for user management"
+        )
+
+    def test_cli_is_emergency_fallback(self):
+        content = _read()
+        assert "app.cli.invite_user" in content, (
+            "CLAUDE.md must retain the CLI reference for emergency use"
+        )
+        lower = content.lower()
+        assert (
+            "fallback" in lower
+            or "emergency" in lower
+            or "emergenc" in lower
+        ), (
+            "CLAUDE.md must position the CLI as emergency fallback, not primary path"
+        )

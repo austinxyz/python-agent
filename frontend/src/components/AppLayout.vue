@@ -101,6 +101,21 @@
       <!-- Admin section (admin role only) -->
       <div v-if="auth.currentUser?.role === 'admin'" class="border-t border-notion-hairline p-2 space-y-1">
         <router-link
+          to="/admin/users"
+          :title="isCollapsed ? '用户管理' : undefined"
+          :aria-current="isActiveRoute('/admin/users') ? 'page' : undefined"
+          :class="[
+            'flex items-center rounded-md text-sm font-medium transition-colors',
+            isCollapsed ? 'justify-center p-2.5' : 'space-x-3 px-3 py-2',
+            isActiveRoute('/admin/users')
+              ? 'bg-notion-tint-lavender text-notion-brand-purple-800'
+              : 'text-notion-slate hover:bg-notion-tint-gray hover:text-notion-ink'
+          ]"
+        >
+          <Users class="w-5 h-5 flex-shrink-0" />
+          <span v-if="!isCollapsed">用户管理</span>
+        </router-link>
+        <router-link
           to="/admin/cert"
           :title="isCollapsed ? '证书与 Tailscale 状态' : undefined"
           :aria-current="isActiveRoute('/admin/cert') ? 'page' : undefined"
@@ -177,7 +192,7 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { Brain, BookOpen, Upload, MessageSquare, Lock, ChevronsLeft, ChevronsRight, LogOut, Shield } from 'lucide-vue-next'
+import { Brain, BookOpen, Upload, MessageSquare, Lock, ChevronsLeft, ChevronsRight, LogOut, Shield, Users } from 'lucide-vue-next'
 import { useAuthStore } from '../stores/auth.js'
 
 const route = useRoute()

@@ -13,6 +13,7 @@ from .routes.private import private_bp
 from .routes.files import files_bp
 from .routes.prompts import prompts_bp
 from .routes.admin import admin_bp
+from .routes.admin_users import admin_users_bp
 from .routes.auth import auth_bp
 
 REQUIRED_ENV_VARS = [
@@ -59,6 +60,7 @@ def create_app(config: dict | None = None) -> Flask:
         app.logger.warning("[BOOTSTRAP] non-fatal failure: %s", e)
 
     app.register_blueprint(admin_bp, url_prefix="/api/admin")
+    app.register_blueprint(admin_users_bp, url_prefix="/api/admin")
     app.register_blueprint(auth_bp, url_prefix="/api/auth")
     app.register_blueprint(ingest_bp, url_prefix="/api/ingest")
     app.register_blueprint(wiki_bp, url_prefix="/api/wiki")
