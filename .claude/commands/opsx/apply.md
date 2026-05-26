@@ -18,6 +18,10 @@ Execute the tasks defined in `openspec/changes/<topic>/tasks.md`. Invoke superpo
 - `project.custom_verification_checks` — appended to verification-before-completion
 - `project.design_system` — design system name (referenced in MOCK tasks for token naming)
 
+Also note these new artifact paths for this change:
+- `openspec/changes/<name>/contracts/` — contract files written by N.0 CONTRACT tasks
+- `openspec/changes/<name>/eval-log.md` — evaluator score history (pre-created by propose)
+
 ---
 
 **Steps**
@@ -53,7 +57,68 @@ Convention for the task ordinal `N.X`: `N` is the group number; `X` is the posit
 
 - **`- [ ] N.X VISUAL DIFF — ...`** → bring up the dev stack (`project.dev_stack_command` from `openspec/config.yaml`, or whatever the task says), navigate to the route, eyeball the rendered UI against the mock. Fix any token/color/text drift. Mark the checkbox.
 
-- **`- [ ] N.X Run superpowers:requesting-code-review on the diff for group N — ...`** → invoke `superpowers:requesting-code-review` via the **Skill** tool. Pass the group's diff as input. Address CRITICAL/HIGH findings inline before moving on; MEDIUM/LOW go to a follow-up note in the change directory.
+- **`- [ ] N.0 CONTRACT — ...`** → read the `### Contract` block above group N in `tasks.md`. Write its content verbatim to `openspec/changes/<name>/contracts/group-N.md`. Confirm all three fields (Spec, Runtime, Code) are non-empty before proceeding. Mark the checkbox.
+
+- **`- [ ] N.E EVAL — ...`** → spawn evaluator subagent (haiku model). See **Evaluator Subagent** and **Retry Loop** sections below. Do NOT mark the checkbox until the evaluator returns PASS. On BLOCK, pause immediately and report to the user. On PASS, mark the checkbox and continue to next group.
+
+- **`- [ ] N.X FIX — ...`** → execute like a GREEN task: write the minimal code change described in the task. Run the relevant test to confirm the fix takes effect. Mark the checkbox. The next task will be another N.E EVAL — the retry loop re-fires automatically.
+
+### Evaluator Subagent
+
+Spawn via the **Agent** tool with `model: haiku`. Pass ONLY these files as context — do not pass the full apply-session conversation:
+
+- `openspec/changes/<name>/contracts/group-N.md`
+- `openspec/changes/<name>/specs/<cap>/spec.md` (all capability specs for this change)
+- `openspec/changes/<name>/design.md`
+- The git diff for files modified in group N: run `git diff HEAD~<n>..HEAD -- <files changed in group N>` and include the output
+
+Before passing the prompt, substitute the current `attempt` count in place of `<attempt_number>` in step 8's YAML block.
+
+Evaluator prompt (pass this verbatim to the subagent):
+
+> You are an external evaluator with a skeptical lens. You have no knowledge of the implementation decisions made during this session.
+>
+> 1. Invoke `superpowers:requesting-code-review` on the provided diff. If you find CRITICAL or HIGH severity issues, return immediately with `STATUS: BLOCK` and the findings. Do not score.
+> 2. Run the Runtime test command from the contract. Execute it as a shell command in the repo root and record pass/fail and output.
+> 3. Compare the diff against each SHALL statement in the contract's Spec section. Score 0–100.
+> 4. Score Runtime 0–100 (100 = all tests pass, 0 = test command fails to run).
+> 5. Score Code 0–100 based on requesting-code-review findings (no CRITICAL/HIGH assumed at this point).
+> 6. Compute total = (Spec × 0.4) + (Runtime × 0.4) + (Code × 0.2).
+> 7. Read the Threshold from the contract.
+> 8. Append to `openspec/changes/<name>/eval-log.md`:
+>    ```yaml
+>    - group: N
+>      attempt: <attempt_number>
+>      scores: {spec: X, runtime: Y, code: Z}
+>      total: T
+>      status: PASS | RETRY
+>      findings:
+>        - "<dimension>: <specific finding>"
+>      fix_tasks:
+>        - "N.F1 FIX — <specific actionable fix>"
+>    ```
+> 9. If total ≥ threshold: return `STATUS: PASS`.
+>    If total < threshold: append the fix_tasks as `- [ ] N.F1 FIX — ...` checkboxes to group N in `tasks.md`, then return `STATUS: RETRY`.
+
+### Retry Loop
+
+The apply agent manages attempt counting per group. Initialize before spawning the first evaluator for each group:
+
+```
+attempt = 1
+score_history = []
+```
+
+After each evaluator result:
+
+- **BLOCK** → pause immediately: "Group N BLOCKED — CRITICAL/HIGH code issue found. Options: (1) Fix the issue manually and type 'resume' to re-run N.E EVAL (attempt count resets to 1), (2) Skip group N, (3) Abort apply." Do not retry automatically.
+- **PASS** → mark N.E EVAL checkbox `[x]`, advance to next group.
+- **RETRY** →
+  - Append `result.total` to `score_history`
+  - Increment `attempt`
+  - **Escalate if:** `attempt > 3` OR `(len(score_history) >= 2 AND score_history[-1] - score_history[-2] < 5)` — note: a score regression (worsening) also triggers escalation, since the delta will be negative (< 5).
+  - If escalating: pause with score history — "Group N failed after {attempt-1} attempts. Score history: {score_history}. Last findings: {findings}. Options: (1) Fix manually then type 'resume', (2) Skip group N, (3) Abort apply."
+  - Otherwise: FIX tasks were already appended to `tasks.md` by the evaluator. Execute them, then re-spawn the evaluator.
 
 - **Final group's verification task** (`Run superpowers:verification-before-completion`) → invoke `superpowers:verification-before-completion`. Runs pytest / vitest / e2e / `console.log` audit. Fix any failures before marking complete.
 
@@ -80,7 +145,10 @@ If paused (blocker, error, ambiguity, user interrupt):
 **Guardrails**
 
 - DO invoke `superpowers:test-driven-development` at session start. Don't pretend.
-- DO invoke `superpowers:requesting-code-review` at every group's `N.Z` checkpoint. Don't batch all reviews to the end.
+- DO spawn an evaluator subagent at every group's `N.E EVAL` checkpoint. Never fold evaluator logic into the apply agent's context — the fresh context is the point.
+- DO write `contracts/group-N.md` at the `N.0 CONTRACT` step before any RED/GREEN tasks in the group. All three fields (Spec, Runtime, Code) must be non-empty.
+- DO manage the retry loop per-group. Max 3 attempts; plateau < 5pt between attempts triggers escalation.
+- NEVER invoke `superpowers:requesting-code-review` directly during apply — the evaluator subagent invokes it internally.
 - DO mark each task `- [x]` immediately after completing it.
 - DON'T skip RED tasks ("the test is obvious; I'll just GREEN"). The TDD skill catches this.
 - DON'T proceed past a group's checkpoint with unaddressed CRITICAL or HIGH review findings.

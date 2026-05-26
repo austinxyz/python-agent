@@ -196,9 +196,9 @@ This change builds on `multi-user-auth-core`. Ensure that change is archived (or
 ## Ship
 
 - [x] S.1 `./scripts/build-and-push.sh` — pushes new api + frontend images. Tag: v20260525-a0dddeb.
-- [ ] S.2 NAS UGOS Docker app → Project python-agent → Pull → Apply.
-- [ ] S.3 Live test on `http://10.0.0.20:8910` — log in (existing admin from core), verify 5th sidebar nav appears, invite a real family member, verify their flow.
-- [ ] S.4 git add / commit with `feat: multi-user-auth-admin-ui` style message.
-- [ ] S.5 git push.
-- [ ] S.6 Update `docs/log/<date>.md` with the deployment summary.
+- [x] S.2 NAS UGOS Docker app → Project python-agent → Pull → Apply.
+- [x] S.3 Live test on `http://10.0.0.20:8910` — invite + accept flow verified live.
+- [x] S.4 git add / commit with `feat: multi-user-auth-admin-ui` style message. Commit: f78d9cd.
+- [x] S.5 git push.
+- [x] S.6 Update `docs/log/2026-05-26.md` with deployment summary.
 - [ ] S.7 `openspec archive multi-user-auth-admin-ui`.

@@ -79,7 +79,9 @@ If the format differs, follow the existing pattern in this specific README — d
 
 ### 5. Cleanup step 3 — update `CLAUDE.md` pitfalls
 
-Read the dev log entry at `docs/log/<date>.md` (if it exists) and the change diff via `git log --oneline <change-base-sha>..<change-head-sha>` plus `git diff <change-base-sha>..<change-head-sha>` (using the SHAs captured in step 2). If any non-obvious gotcha emerged (timing-sensitive bootstrap, env-var ordering, schema migration foot-gun, file-handling edge case), append a 2-3 line entry to the relevant section of `CLAUDE.md`'s Pitfalls.
+First, read `openspec/changes/archive/<date>-<name>/eval-log.md` (it was archived with the other artifacts). Find any entries where `attempt > 1` — these groups needed multiple evaluator passes, which is a structural signal that something non-obvious happened. For each such group, read the `findings` from the failed attempts: if they describe a foot-gun worth documenting (timing-sensitive behavior, env-var ordering, schema migration edge case, boundary condition the spec didn't make explicit), that's a CLAUDE.md pitfall candidate.
+
+Then read the dev log entry at `docs/log/<date>.md` (if it exists) and the change diff via `git log --oneline <change-base-sha>..<change-head-sha>` plus `git diff <change-base-sha>..<change-head-sha>` (using the SHAs captured in step 2). If any non-obvious gotcha emerged (timing-sensitive bootstrap, env-var ordering, schema migration foot-gun, file-handling edge case), append a 2-3 line entry to the relevant section of `CLAUDE.md`'s Pitfalls.
 
 If no new pitfall surfaced, skip this step. Don't fabricate pitfalls.
 
