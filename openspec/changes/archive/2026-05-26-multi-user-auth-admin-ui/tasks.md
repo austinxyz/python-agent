@@ -181,7 +181,7 @@ This change builds on `multi-user-auth-core`. Ensure that change is archived (or
 - [x] 9.1 Run full backend pytest — 354 passed, 1 skipped (all green; test_export_volumes_script.py skipped due to Windows OS limitation).
 - [x] 9.2 Run full frontend vitest — 273 passed (26 files, all green).
 - [x] 9.3 Run full Playwright — 59 passed (chromium desktop + mobile-chrome, all green including new admin-flow spec).
-- [ ] 9.4 Manual smoke on dev stack (`npm run dev:up`):
+- [x] 9.4 Manual smoke on dev stack (`npm run dev:up`):
   - Log in as admin (from core).
   - Navigate to /admin/users via 5th sidebar nav.
   - Invite a fake test user; copy URL.
