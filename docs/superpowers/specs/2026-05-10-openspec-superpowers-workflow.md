@@ -1,8 +1,9 @@
 # OpenSpec + Superpowers Workflow
 
-**Status:** Active (as of 2026-05-10)
-**Schema:** `superpowers-driven` at `openspec/schemas/superpowers-driven/`
-**Slash commands:** `.claude/commands/opsx/{explore,propose,apply,archive}.md`
+**Status:** Active (as of 2026-05-10; last updated 2026-06-26)
+**Schema:** `superpowers-driven` — installed at user-level via `opsx-superpowers` plugin (`opsx-install`)
+**Plugin repo:** `github.com/austinxyz/opsx-superpowers` (commands + schema + templates)
+**Slash commands:** `.claude/commands/opsx/{explore,propose,apply,archive}.md` (synced from plugin)
 
 ## TL;DR
 
@@ -15,8 +16,8 @@ Every change in this repo goes through 4 phases:
 /opsx:propose <topic>   → openspec/changes/<topic>/{proposal,specs,design,tasks}.md
        (Status: REVIEWED gate; --schema superpowers-driven)
 
-/opsx:apply <topic>     → executes tasks.md with TDD + review skills wired in
-       (each task group ends with code-review; final group runs verification)
+/opsx:apply <topic>     → executes tasks.md with CONTRACT/EVAL harness
+       (each group: N.0 CONTRACT → RED/GREEN → N.E EVAL subagent → FIX loop → final verification)
 
 /opsx:archive <topic>   → openspec/changes/archive/<date>-<topic>/ + 4 cleanups
        (capability ## Purpose; specs README; CLAUDE.md; project README; dev log)
@@ -29,9 +30,9 @@ The `multi-user-auth-core` change exercised every step end-to-end on 2026-05-10.
 ## Where to read more
 
 - **Design doc** (the why and the architecture): `docs/superpowers/specs/2026-05-10-openspec-superpowers-workflow-design.md`
-- **Implementation plan** (this rollout): `docs/superpowers/plans/2026-05-10-openspec-superpowers-workflow.md`
-- **Schema definition**: `openspec/schemas/superpowers-driven/schema.yaml`
-- **Per-phase command definitions**: `.claude/commands/opsx/<phase>.md`
+- **Plugin design**: `docs/superpowers/specs/2026-05-11-opsx-superpowers-plugin-design.md`
+- **Schema definition**: `opsx-superpowers` plugin → `schemas/superpowers-driven/schema.yaml` (user-level after `opsx-install`)
+- **Per-phase command definitions**: `.claude/commands/opsx/<phase>.md` (synced from plugin)
 - **Project context (tech stack, paths, conventions)**: `openspec/config.yaml`
 
 ## Phase 1: `/opsx:explore`
@@ -56,7 +57,16 @@ Output: `openspec/changes/<topic>/{proposal,specs,design,tasks}.md` plus the req
 
 ## Phase 3: `/opsx:apply`
 
-Reads context (proposal, specs, design, mocks, requirements). Invokes `superpowers:test-driven-development` at session start. Walks tasks; dispatches by keyword in the task description (RED / GREEN / MOCK / VISUAL DIFF / Run superpowers:requesting-code-review). Final group invokes `superpowers:verification-before-completion`.
+Reads context (proposal, specs, design, mocks, requirements). Invokes `superpowers:test-driven-development` at session start. Walks tasks with CONTRACT/EVAL harness:
+
+- **`N.0 CONTRACT`** → write `contracts/group-N.md` (Spec / Runtime / Code fields from tasks.md)
+- **`N.X RED`** → write failing test; confirm failure
+- **`N.X GREEN`** → minimal impl to pass
+- **`N.X MOCK / VISUAL DIFF`** → UI sandwich for view components
+- **`N.E EVAL`** → spawn haiku evaluator subagent; it runs code review + tests + spec scoring (Spec×0.4 + Runtime×0.4 + Code×0.2); ≥ threshold → PASS; < threshold → appends FIX tasks + retries (max 3 attempts; plateau < 5pt → escalate to user)
+- **`N.X FIX`** → execute fix, re-fire EVAL
+
+Final group has no CONTRACT/EVAL — uses `superpowers:verification-before-completion` instead.
 
 Marks `- [x]` per-task immediately, not in batch.
 
@@ -69,6 +79,8 @@ Runs `openspec archive` then post-archive cleanup:
 3. Append to `CLAUDE.md` pitfalls if a new gotcha surfaced
 4. Conditionally update project root `README.md` (user-visible changes only)
 
+Cleanup step 3 now reads `eval-log.md` from archive — groups where `attempt > 1` are pitfall candidates for CLAUDE.md.
+
 Plus dev log check (`docs/log/<today>.md`) and a single cleanup commit.
 
 ## Where rules live (architecture)
@@ -76,7 +88,7 @@ Plus dev log check (`docs/log/<today>.md`) and a single cleanup commit.
 | Concern | Lives in | Why |
 |---|---|---|
 | Artifact paths and dependencies | Schema (`schema.yaml`) | Static graph — schema is the right tool |
-| Per-artifact prompt rules (TDD pattern, review checkpoints, MOCK/VISUAL DIFF sandwich) | Schema (per-artifact `instruction:`) | Inheritable; survives forks |
+| Per-artifact prompt rules (TDD pattern, CONTRACT/EVAL gates, MOCK/VISUAL DIFF sandwich) | Schema (per-artifact `instruction:`) + tasks template | Inheritable; survives forks |
 | Project context (tech stack, file paths, conventions) | `openspec/config.yaml` | Project-specific, not workflow-specific |
 | Phase orchestration (Status: gate, Visual Companion, archive cleanup) | Slash commands | Actions, not artifacts |
 | Skill invocation timing (when to call TDD / review / verification) | `.claude/commands/opsx/apply.md` | Execution-time decisions |
@@ -87,6 +99,8 @@ Plus dev log check (`docs/log/<today>.md`) and a single cleanup commit.
 
 ## Migration history
 
-- 2026-05-10: schema forked from `spec-driven`; `requirements` + `mocks` artifacts added; rules migrated from `openspec/config.yaml` to schema instructions; 4 slash commands rewritten. First validation target: `nas-https` (next change to use this workflow).
-- In-flight `multi-user-auth-admin-ui` (created on `spec-driven`) keeps that schema until archived. Per-change schema is locked at change-creation time.
-- In-flight `chat-file-pinning` was created before this schema was finalized; its `requirements` and `mocks` artifacts will permanently show `status: ready` (known limitation above). When you eventually `/opsx:archive` it, the pre-flight guard will warn about incomplete artifacts — confirm to proceed, and consider whether to retrofit its `tasks.md` with the workflow's RED/GREEN + review-checkpoint structure before `/opsx:apply`.
+- 2026-05-10: schema forked from `spec-driven`; `requirements` + `mocks` artifacts added; rules migrated from `openspec/config.yaml` to schema instructions; 4 slash commands rewritten. First validation target: `nas-https`.
+- 2026-05-11: workflow extracted to `opsx-superpowers` plugin. Project-specific content moves to `openspec/config.yaml project:` section. Schema promoted to user-level via `opsx-install`. python-agent deletes project-level schema copy.
+- 2026-05-xx: CONTRACT/EVAL harness added. `propose.md` generates `### Contract` blocks + pre-creates `contracts/` dir + `eval-log.md`. `apply.md` dispatches `N.0 CONTRACT` / `N.E EVAL` / `N.X FIX` task types; spawns haiku evaluator subagent per group. `archive.md` surfaces `eval-log.md` retry groups as CLAUDE.md pitfall candidates. `tasks.md` template updated to CONTRACT/EVAL structure.
+- 2026-05-26: `multi-user-auth-admin-ui` archived. First full CONTRACT/EVAL harness run.
+- `chat-file-pinning` still in-flight on pre-harness `tasks.md` — when archived, eval-log and contracts dirs won't exist; skip EVAL dispatch for that change only.
